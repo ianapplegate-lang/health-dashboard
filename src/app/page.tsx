@@ -62,6 +62,10 @@ export default async function Home() {
           <h1 className="text-2xl font-semibold tracking-tight">Health Dashboard</h1>
           <p className="text-sm text-zinc-400">
             Logged in as {user.displayName ?? user.email} ·{" "}
+            <a href="/trends" className="underline hover:text-zinc-200">
+              Trends
+            </a>{" "}
+            ·{" "}
             <a href="/import" className="underline hover:text-zinc-200">
               Import Takeout
             </a>
