@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "import:takeout": "NODE_OPTIONS='--max-old-space-size=8192' tsx --tsconfig tsconfig.scripts.json scripts/import-takeout.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
