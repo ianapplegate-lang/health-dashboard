@@ -1,9 +1,6 @@
 import { loadEnvConfig } from "@next/env";
 import fs from "node:fs/promises";
 import path from "node:path";
-import JSZip from "jszip";
-import { getOrCreateDevUser } from "../src/lib/session";
-import { importFitbitTakeout, importGoogleFitTakeout } from "../src/lib/import/takeout";
 
 loadEnvConfig(process.cwd());
 
@@ -13,6 +10,14 @@ async function main() {
     console.error("Usage: npm run import:takeout -- <path-to-takeout.zip>");
     process.exit(1);
   }
+
+  const [{ default: JSZip }, { getOrCreateDevUser }, { importFitbitTakeout, importGoogleFitTakeout }] =
+    await Promise.all([
+      import("jszip"),
+      import("../src/lib/session"),
+      import("../src/lib/import/takeout"),
+    ]);
+
   const abs = path.resolve(arg);
   console.log(`Loading ${abs} (${humanSize((await fs.stat(abs)).size)})...`);
   const buf = await fs.readFile(abs);
@@ -25,7 +30,11 @@ async function main() {
 
   if (!hasFitbit && !hasFit) {
     console.error("Zip contains neither Fitbit/ nor Fit/Daily/ entries.");
-    console.error(`Top-level paths: ${Array.from(new Set(Object.keys(zip.files).map((p) => p.split("/")[0]))).join(", ")}`);
+    console.error(
+      `Top-level paths: ${Array.from(
+        new Set(Object.keys(zip.files).map((p) => p.split("/")[0])),
+      ).join(", ")}`,
+    );
     process.exit(1);
   }
 
