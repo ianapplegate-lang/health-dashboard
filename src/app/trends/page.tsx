@@ -1,4 +1,4 @@
-import { getOrCreateDevUser } from "@/lib/session";
+import { getCurrentDbUser } from "@/lib/session";
 import {
   stepsSeries,
   sleepSeries,
@@ -12,7 +12,7 @@ import { SportBreakdown } from "@/components/charts/SportBreakdown";
 export const dynamic = "force-dynamic";
 
 export default async function TrendsPage() {
-  const user = await getOrCreateDevUser();
+  const user = await getCurrentDbUser();
 
   const [steps, sleep, rhr, weight, sports] = await Promise.all([
     stepsSeries(user.id, 90),

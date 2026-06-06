@@ -11,7 +11,7 @@ async function main() {
     process.exit(1);
   }
 
-  const [{ default: JSZip }, { getOrCreateDevUser }, { importFitbitTakeout, importGoogleFitTakeout }] =
+  const [{ default: JSZip }, { getAllowedUserByEmail }, { importFitbitTakeout, importGoogleFitTakeout }] =
     await Promise.all([
       import("jszip"),
       import("../src/lib/session"),
@@ -38,7 +38,7 @@ async function main() {
     process.exit(1);
   }
 
-  const user = await getOrCreateDevUser();
+  const user = await getAllowedUserByEmail();
 
   if (hasFitbit) {
     console.log("Importing Fitbit data...");

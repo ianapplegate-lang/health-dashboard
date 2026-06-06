@@ -3,7 +3,7 @@ import { getProvider } from "@/providers";
 import { stateCookieName } from "@/lib/oauth-state";
 import { db } from "@/db/client";
 import { oauthTokens, type Provider } from "@/db/schema";
-import { getOrCreateDevUser } from "@/lib/session";
+import { getCurrentDbUser } from "@/lib/session";
 import { sql } from "drizzle-orm";
 
 export async function GET(
@@ -28,7 +28,7 @@ export async function GET(
   }
 
   const tokens = await provider.exchangeCode(code);
-  const user = await getOrCreateDevUser();
+  const user = await getCurrentDbUser();
 
   await db
     .insert(oauthTokens)

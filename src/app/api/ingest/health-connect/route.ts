@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db/client";
 import { dailyMetrics, sleepSessions, workouts } from "@/db/schema";
-import { getOrCreateDevUser } from "@/lib/session";
+import { getAllowedUserByEmail } from "@/lib/session";
 import { sql } from "drizzle-orm";
 
 export const runtime = "nodejs";
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const user = await getOrCreateDevUser();
+  const user = await getAllowedUserByEmail();
   let dailyUpserts = 0;
   let sleepUpserts = 0;
   let workoutUpserts = 0;

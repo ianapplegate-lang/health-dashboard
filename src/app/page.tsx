@@ -1,4 +1,4 @@
-import { getOrCreateDevUser } from "@/lib/session";
+import { getCurrentDbUser } from "@/lib/session";
 import {
   recentWorkouts,
   dailyMetricsLast,
@@ -25,7 +25,7 @@ function fmtDistance(m: number | null) {
 }
 
 export default async function Home() {
-  const user = await getOrCreateDevUser().catch(() => null);
+  const user = await getCurrentDbUser().catch(() => null);
 
   if (!user) {
     return (

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import JSZip from "jszip";
-import { getOrCreateDevUser } from "@/lib/session";
+import { getCurrentDbUser } from "@/lib/session";
 import { importFitbitTakeout, importGoogleFitTakeout } from "@/lib/import/takeout";
 
 export const runtime = "nodejs";
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
   const buf = Buffer.from(await file.arrayBuffer());
   const zip = await JSZip.loadAsync(buf);
-  const user = await getOrCreateDevUser();
+  const user = await getCurrentDbUser();
 
   const hasFitbit = Object.keys(zip.files).some((p) => p.includes("Fitbit/"));
   const hasFit = Object.keys(zip.files).some((p) => p.includes("Fit/Daily"));

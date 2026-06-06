@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runSync } from "@/sync";
-import { getOrCreateDevUser } from "@/lib/session";
+import { getCurrentDbUser } from "@/lib/session";
 import type { Provider } from "@/db/schema";
 
 export async function POST(
@@ -11,7 +11,7 @@ export async function POST(
   if (!["strava", "fitbit", "withings"].includes(provider)) {
     return NextResponse.json({ error: "unknown provider" }, { status: 400 });
   }
-  const user = await getOrCreateDevUser();
+  const user = await getCurrentDbUser();
   try {
     const count = await runSync(user.id, provider as Provider);
     return NextResponse.json({ ok: true, upserts: count });
