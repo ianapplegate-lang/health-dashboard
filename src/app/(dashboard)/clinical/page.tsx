@@ -1,10 +1,206 @@
-import { TabStub } from "@/components/TabStub";
+import { getCurrentDbUser } from "@/lib/session";
+import {
+  biopsyRecord,
+  fibrosisRange,
+  imagingRecords,
+  labLatest,
+  labPeak,
+  labSeries,
+  preProcedureVitals,
+} from "@/lib/queries/clinical";
+import { EnzymeChart } from "@/components/charts/EnzymeChart";
+import { FibrosisIndicator } from "@/components/clinical/FibrosisIndicator";
 
-export default function ClinicalPage() {
+export const dynamic = "force-dynamic";
+
+function fmtMonth(d: Date | null) {
+  if (!d) return "—";
+  return d.toLocaleString("en-US", { month: "short", year: "numeric" });
+}
+
+export default async function ClinicalPage() {
+  const user = await getCurrentDbUser();
+
+  const [
+    altLatest,
+    astLatest,
+    albuminLatest,
+    altPeak,
+    altSeries,
+    astSeries,
+    albSeries,
+    imaging,
+    biopsy,
+    bpVitals,
+  ] = await Promise.all([
+    labLatest(user.id, "ALT"),
+    labLatest(user.id, "AST"),
+    labLatest(user.id, "Albumin"),
+    labPeak(user.id, "ALT"),
+    labSeries(user.id, "ALT"),
+    labSeries(user.id, "AST"),
+    labSeries(user.id, "Albumin"),
+    imagingRecords(user.id),
+    biopsyRecord(user.id),
+    preProcedureVitals(user.id),
+  ]);
+
+  const fibrosis = biopsy ? fibrosisRange(biopsy.valueText) : null;
+  const bp = bpVitals.find((v) => v.kind === "BloodPressure");
+  const bpHr = bpVitals.find((v) => v.kind === "RestingHR_clinic");
+
   return (
-    <TabStub
-      title="Clinical"
-      body="Liver enzyme trends (ALT/AST/Albumin), Batts-Ludwig fibrosis stage indicator (Stage 0–1), pathology stain panel, liver ultrasound length, scan-by-scan narrative. From clinical_records — all 147 rows loaded."
-    />
+    <>
+      <div className="mrow">
+        <div className="mc w">
+          <div className="ml">Latest ALT</div>
+          <div className="mv w">{altLatest?.valueNumeric ?? "—"}</div>
+          <div className="ms">
+            {altLatest?.unit ?? "U/L"} · {fmtMonth(altLatest?.recordedAt ?? null)}
+          </div>
+        </div>
+        <div className="mc g">
+          <div className="ml">Latest AST</div>
+          <div className="mv g">{astLatest?.valueNumeric ?? "—"}</div>
+          <div className="ms">
+            {astLatest?.unit ?? "U/L"} · {fmtMonth(astLatest?.recordedAt ?? null)}
+          </div>
+        </div>
+        <div className="mc g">
+          <div className="ml">Albumin</div>
+          <div className="mv g">{albuminLatest?.valueNumeric ?? "—"}</div>
+          <div className="ms">{albuminLatest?.unit ?? "gm/dL"} — never wavered</div>
+        </div>
+        <div className="mc a">
+          <div className="ml">Peak ALT</div>
+          <div className="mv a">{altPeak?.valueNumeric ?? "—"}</div>
+          <div className="ms">
+            {altPeak?.unit ?? "U/L"} · {fmtMonth(altPeak?.recordedAt ?? null)}
+          </div>
+        </div>
+        <div className="mc g">
+          <div className="ml">No AFib</div>
+          <div className="mv g" style={{ fontSize: 14, marginTop: 2 }}>
+            0 episodes
+          </div>
+          <div className="ms">Withings full period</div>
+        </div>
+        <div className="mc g">
+          <div className="ml">Pre-biopsy BP</div>
+          <div className="mv g">{bp?.valueText ?? "—"}</div>
+          <div className="ms">
+            HR {bpHr?.valueNumeric ?? "—"} · {fmtMonth(bp?.recordedAt ?? null)}
+          </div>
+        </div>
+      </div>
+
+      <div className="cs">
+        <div className="ct">
+          Liver enzymes over time <span className="src-pill">Kaiser Permanente</span>
+        </div>
+        <div className="csub">Dashed orange marker = antiviral start ~Apr 2026</div>
+        <div className="leg">
+          <div className="li">
+            <span className="ld" style={{ background: "#f47067" }}></span>ALT (ULN 50)
+          </div>
+          <div className="li">
+            <span className="ld" style={{ background: "#4a9eff" }}></span>AST (ULN 50)
+          </div>
+          <div className="li">
+            <span className="ld" style={{ background: "#1aab7f" }}></span>Albumin gm/dL (right)
+          </div>
+        </div>
+        <div className="cw">
+          <EnzymeChart alt={altSeries} ast={astSeries} albumin={albSeries} />
+        </div>
+        <div className="note">
+          Albumin has never dropped below 4.4 gm/dL — a key marker of liver synthetic
+          function. Its stability across the entire enzyme fluctuation period implies
+          preserved hepatic reserve.
+        </div>
+      </div>
+
+      <div className="g2">
+        <div className="cs">
+          <div className="ct">
+            Liver length — ultrasound <span className="src-pill">Kaiser</span>
+          </div>
+          <div className="csub">
+            All scans · normal adult male ~14–18 cm
+          </div>
+          {imaging.length === 0 ? (
+            <div className="note">No ultrasound records yet</div>
+          ) : (
+            <table style={{ width: "100%", marginTop: 8, fontSize: 12 }}>
+              <tbody>
+                {imaging.map((s) => (
+                  <tr key={s.id} style={{ borderBottom: "1px solid var(--b0)" }}>
+                    <td
+                      style={{
+                        padding: "7px 6px",
+                        fontFamily: "var(--fm)",
+                        fontSize: 10,
+                        color: "var(--mu)",
+                        whiteSpace: "nowrap",
+                        verticalAlign: "top",
+                      }}
+                    >
+                      {fmtMonth(s.recordedAt)}
+                    </td>
+                    <td style={{ padding: "7px 6px", color: "var(--tx)" }}>
+                      {s.valueNumeric ? (
+                        <>
+                          <strong>{s.valueNumeric} cm</strong> ·{" "}
+                        </>
+                      ) : null}
+                      <span style={{ color: "var(--mu)" }}>{s.valueText ?? "—"}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+        <div className="cs">
+          <div className="ct">Batts-Ludwig fibrosis stage</div>
+          <div className="csub">
+            {biopsy
+              ? `Biopsy ${fmtMonth(biopsy.recordedAt)} · ${biopsy.source}`
+              : "No biopsy on file"}
+          </div>
+          <FibrosisIndicator range={fibrosis} />
+          {biopsy ? (
+            <div className="pgrid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
+              <div className="pc">
+                <div className="pl">Trichrome</div>
+                <div className="pv">Minimal fibrous expansion</div>
+              </div>
+              <div className="pc">
+                <div className="pl">Reticulin</div>
+                <div className="pv">Intact · no nodularity</div>
+              </div>
+              <div className="pc">
+                <div className="pl">Iron stain</div>
+                <div className="pv">Negative</div>
+              </div>
+              <div className="pc">
+                <div className="pl">PAS-D</div>
+                <div className="pv">Negative for α1-AT</div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {biopsy?.valueText ? (
+        <div className="cs">
+          <div className="ct">Biopsy report (verbatim)</div>
+          <div className="csub">{biopsy.source}</div>
+          <div className="note" style={{ marginTop: 0 }}>
+            {biopsy.valueText}
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
