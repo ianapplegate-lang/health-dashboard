@@ -3,7 +3,6 @@ import type { Provider } from "@/db/schema";
 
 const PROVIDERS: { id: Provider; label: string }[] = [
   { id: "strava", label: "Strava" },
-  { id: "fitbit", label: "Fitbit (Google)" },
   { id: "withings", label: "Withings" },
 ];
 

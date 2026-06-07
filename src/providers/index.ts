@@ -1,13 +1,11 @@
 import type { ProviderClient } from "./types";
 import { strava } from "./strava";
-import { fitbit } from "./fitbit";
 import { withings } from "./withings";
 
-export type OAuthProvider = "strava" | "fitbit" | "withings";
+export type OAuthProvider = "strava" | "withings";
 
 export const providers: Record<OAuthProvider, ProviderClient> = {
   strava,
-  fitbit,
   withings,
 };
 

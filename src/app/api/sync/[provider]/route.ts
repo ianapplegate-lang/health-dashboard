@@ -8,7 +8,7 @@ export async function POST(
   { params }: { params: Promise<{ provider: string }> },
 ) {
   const { provider } = await params;
-  if (!["strava", "fitbit", "withings"].includes(provider)) {
+  if (!["strava", "withings"].includes(provider)) {
     return NextResponse.json({ error: "unknown provider" }, { status: 400 });
   }
   const user = await getCurrentDbUser();

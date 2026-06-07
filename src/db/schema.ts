@@ -11,7 +11,7 @@ import {
   date,
 } from "drizzle-orm/pg-core";
 
-export const providerEnum = ["strava", "fitbit", "withings", "health-connect"] as const;
+export const providerEnum = ["strava", "withings", "health-connect"] as const;
 export type Provider = (typeof providerEnum)[number];
 
 export const users = pgTable("users", {
@@ -137,3 +137,65 @@ export const syncRuns = pgTable("sync_runs", {
   itemsUpserted: integer("items_upserted").default(0).notNull(),
   error: text("error"),
 });
+
+export const clinicalRecords = pgTable(
+  "clinical_records",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull(),
+    category: text("category").notNull(),
+    kind: text("kind").notNull(),
+    valueNumeric: real("value_numeric"),
+    valueText: text("value_text"),
+    unit: text("unit"),
+    referenceLow: real("reference_low"),
+    referenceHigh: real("reference_high"),
+    abnormalFlag: text("abnormal_flag"),
+    source: text("source").notNull(),
+    notes: text("notes"),
+    raw: jsonb("raw"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("clinical_user_recorded_kind_source_uq").on(
+      t.userId, t.recordedAt, t.kind, t.source,
+    ),
+    index("clinical_user_kind_idx").on(t.userId, t.kind, t.recordedAt),
+    index("clinical_user_category_idx").on(t.userId, t.category, t.recordedAt),
+  ],
+);
+
+export type TrainingMovement = {
+  name: string;
+  sets: number;
+  repsTarget?: number | null;
+  repsActual?: number | null;
+  weightKg: number | null;
+  rir?: number | null;
+  notesText?: string;
+};
+
+export const trainingSessions = pgTable(
+  "training_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    plannedFor: timestamp("planned_for", { withTimezone: true }).notNull(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    sessionType: text("session_type").notNull(),
+    title: text("title"),
+    movements: jsonb("movements").$type<TrainingMovement[]>(),
+    notes: text("notes"),
+    calendarEventId: text("calendar_event_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("training_user_planned_idx").on(t.userId, t.plannedFor),
+    index("training_calendar_idx").on(t.calendarEventId),
+  ],
+);

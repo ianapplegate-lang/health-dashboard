@@ -2,7 +2,6 @@ import { db } from "@/db/client";
 import { syncRuns, type Provider } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { syncStrava } from "./strava";
-import { syncFitbit } from "./fitbit";
 import { syncWithings } from "./withings";
 
 export async function runSync(userId: string, provider: Provider): Promise<number> {
@@ -13,8 +12,8 @@ export async function runSync(userId: string, provider: Provider): Promise<numbe
   try {
     let upserts = 0;
     if (provider === "strava") upserts = await syncStrava(userId);
-    else if (provider === "fitbit") upserts = await syncFitbit(userId);
     else if (provider === "withings") upserts = await syncWithings(userId);
+    else throw new Error(`no sync handler for provider: ${provider}`);
     await db
       .update(syncRuns)
       .set({ status: "ok", finishedAt: new Date(), itemsUpserted: upserts })
