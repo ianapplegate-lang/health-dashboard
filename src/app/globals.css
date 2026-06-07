@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap');
 
 :root {
   --bg: #0d1117;
@@ -28,8 +27,8 @@
   --pD: rgba(163, 113, 247, 0.11);
   --pB: rgba(163, 113, 247, 0.3);
   --pink: #f778ba;
-  --fn: 'DM Sans', sans-serif;
-  --fm: 'DM Mono', monospace;
+  --fn: var(--font-dm-sans, 'DM Sans'), sans-serif;
+  --fm: var(--font-dm-mono, 'DM Mono'), monospace;
   --r: 10px;
   --rs: 6px;
 }

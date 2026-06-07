@@ -1,7 +1,20 @@
 import type { Metadata, Viewport } from "next";
+import { DM_Sans, DM_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import { RegisterSW } from "@/components/RegisterSW";
+
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
+  subsets: ["latin"],
+  weight: ["300", "400", "500"],
+});
+
+const dmMono = DM_Mono({
+  variable: "--font-dm-mono",
+  subsets: ["latin"],
+  weight: ["300", "400", "500"],
+});
 
 export const metadata: Metadata = {
   title: "Health Dashboard — Ian Applegate",
@@ -24,7 +37,10 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en" className="antialiased">
+      <html
+        lang="en"
+        className={`${dmSans.variable} ${dmMono.variable} antialiased`}
+      >
         <body>
           {children}
           <RegisterSW />
