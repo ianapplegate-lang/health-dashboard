@@ -7,7 +7,7 @@ function clerkAccountPortalUrl(): string {
     const b64 = pk.replace(/^pk_(test|live)_/, "").replace(/\$+$/, "");
     const decoded = Buffer.from(b64, "base64").toString("utf-8").replace(/\$+$/, "");
     if (!decoded) throw new Error("empty");
-    const host = decoded.replace(/^clerk\./, "");
+    const host = decoded.replace(/\.clerk\./, ".");
     return `https://${host}`;
   } catch {
     return "";
