@@ -1,28 +1,17 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import { RegisterSW } from "@/components/RegisterSW";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "Health Dashboard",
+  title: "Health Dashboard — Ian Applegate",
   description: "Personal health and fitness dashboard",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "Health", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0a0a",
+  themeColor: "#0d1117",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -35,11 +24,8 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html
-        lang="en"
-        className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-      >
-        <body className="min-h-full flex flex-col bg-zinc-950 text-zinc-100">
+      <html lang="en" className="antialiased">
+        <body>
           {children}
           <RegisterSW />
         </body>
