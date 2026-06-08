@@ -197,7 +197,11 @@ export default async function OverviewPage() {
         </div>
       ) : null}
 
-      <WeekActivity weekStart={week.weekStart} items={week.items} />
+      <WeekActivity
+        weekStart={week.weekStart}
+        items={week.items}
+        calendarConnected={week.calendarConnected}
+      />
 
       <div className="cs">
         <div className="ct">

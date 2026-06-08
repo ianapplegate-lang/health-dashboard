@@ -11,7 +11,7 @@ import {
   date,
 } from "drizzle-orm/pg-core";
 
-export const providerEnum = ["strava", "withings", "health-connect"] as const;
+export const providerEnum = ["strava", "withings", "health-connect", "google-calendar"] as const;
 export type Provider = (typeof providerEnum)[number];
 
 export const users = pgTable("users", {

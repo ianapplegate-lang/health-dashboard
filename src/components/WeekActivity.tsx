@@ -7,14 +7,48 @@ function dayIndex(d: Date, weekStart: Date): number {
   return Math.floor(ms / (1000 * 60 * 60 * 24));
 }
 
+function itemClasses(source: WeekItem["source"]): {
+  bg: string;
+  fg: string;
+  ring: string;
+} {
+  switch (source) {
+    case "training-planned":
+      return {
+        bg: "rgba(227,179,65,0.10)",
+        fg: "#e3b341",
+        ring: "rgba(227,179,65,0.25)",
+      };
+    case "training-completed":
+      return {
+        bg: "rgba(26,171,127,0.15)",
+        fg: "#1aab7f",
+        ring: "rgba(26,171,127,0.3)",
+      };
+    case "calendar":
+      return {
+        bg: "rgba(74,158,255,0.12)",
+        fg: "#4a9eff",
+        ring: "rgba(74,158,255,0.3)",
+      };
+    case "workout":
+    default:
+      return {
+        bg: "rgba(255,255,255,0.05)",
+        fg: "#e6edf3",
+        ring: "rgba(255,255,255,0.09)",
+      };
+  }
+}
+
 export function WeekActivity({
   weekStart,
   items,
-  calendarStub = true,
+  calendarConnected,
 }: {
   weekStart: Date;
   items: WeekItem[];
-  calendarStub?: boolean;
+  calendarConnected: boolean;
 }) {
   const days: WeekItem[][] = [[], [], [], [], [], [], []];
   for (const it of items) {
@@ -30,65 +64,128 @@ export function WeekActivity({
   };
 
   return (
-    <section className="rounded-2xl bg-zinc-900 ring-1 ring-zinc-800 overflow-hidden">
-      <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
-        <h2 className="text-sm font-medium text-zinc-200">This week</h2>
-        <span className="text-xs text-zinc-500">{fmtRange()}</span>
+    <div className="cs" style={{ padding: 0, overflow: "hidden" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "12px 16px",
+          borderBottom: "1px solid var(--b0)",
+        }}
+      >
+        <div className="ct" style={{ margin: 0 }}>This week</div>
+        <span className="csub" style={{ margin: 0 }}>{fmtRange()}</span>
       </div>
-      <div className="grid grid-cols-7 divide-x divide-zinc-800">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
         {DAY_LABELS.map((label, i) => {
           const dayDate = new Date(weekStart);
           dayDate.setDate(dayDate.getDate() + i);
-          const isToday =
-            new Date().toDateString() === dayDate.toDateString();
+          const isToday = new Date().toDateString() === dayDate.toDateString();
           return (
-            <div key={label} className="min-h-[160px] p-2">
+            <div
+              key={label}
+              style={{
+                minHeight: 170,
+                padding: 8,
+                borderRight: i < 6 ? "1px solid var(--b0)" : "none",
+              }}
+            >
               <div
-                className={`flex items-baseline justify-between mb-2 ${
-                  isToday ? "text-emerald-400" : "text-zinc-400"
-                }`}
+                style={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  justifyContent: "space-between",
+                  marginBottom: 6,
+                  color: isToday ? "var(--teal)" : "var(--mu)",
+                  fontFamily: "var(--fm)",
+                  fontSize: 10,
+                  fontWeight: 500,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
               >
-                <span className="text-[11px] uppercase tracking-wide font-medium">
-                  {label}
-                </span>
-                <span className="text-[11px] tabular-nums">{dayDate.getDate()}</span>
+                <span>{label}</span>
+                <span>{dayDate.getDate()}</span>
               </div>
-              <div className="space-y-1.5">
+              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                 {days[i].length === 0 ? (
-                  <div className="text-[10px] text-zinc-600">—</div>
+                  <div style={{ fontSize: 10, color: "var(--dm)" }}>—</div>
                 ) : (
-                  days[i].map((it, idx) => (
-                    <div
-                      key={idx}
-                      className={`rounded-md px-1.5 py-1 text-[11px] leading-tight ${
-                        it.source === "training-planned"
-                          ? "bg-amber-500/10 text-amber-200 ring-1 ring-amber-500/20"
-                          : it.source === "training-completed"
-                          ? "bg-emerald-500/15 text-emerald-200 ring-1 ring-emerald-500/30"
-                          : "bg-zinc-800 text-zinc-200"
-                      }`}
-                    >
-                      <div className="flex items-center gap-1">
-                        <span>{it.emoji}</span>
-                        <span className="truncate font-medium">{it.label}</span>
+                  days[i].map((it, idx) => {
+                    const c = itemClasses(it.source);
+                    return (
+                      <div
+                        key={idx}
+                        style={{
+                          borderRadius: 5,
+                          padding: "4px 6px",
+                          background: c.bg,
+                          color: c.fg,
+                          border: `1px solid ${c.ring}`,
+                          fontSize: 11,
+                          lineHeight: 1.3,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                            fontWeight: 500,
+                          }}
+                        >
+                          <span>{it.emoji}</span>
+                          <span
+                            style={{
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {it.label}
+                          </span>
+                        </div>
+                        {it.detail ? (
+                          <div
+                            style={{
+                              fontSize: 10,
+                              color: "var(--mu)",
+                              fontFamily: "var(--fm)",
+                              marginTop: 1,
+                            }}
+                          >
+                            {it.detail}
+                          </div>
+                        ) : null}
                       </div>
-                      {it.detail ? (
-                        <div className="text-[10px] text-zinc-400">{it.detail}</div>
-                      ) : null}
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
           );
         })}
       </div>
-      {calendarStub ? (
-        <div className="border-t border-zinc-800 px-4 py-2 text-[11px] text-zinc-500">
+      {!calendarConnected ? (
+        <div
+          style={{
+            borderTop: "1px solid var(--b0)",
+            padding: "8px 16px",
+            fontSize: 11,
+            color: "var(--mu)",
+            fontFamily: "var(--fm)",
+          }}
+        >
           Sculpt + football class bookings will appear here once Google Calendar is connected.{" "}
-          <span className="text-zinc-600">(pending)</span>
+          <a
+            href="/api/connect/google-calendar"
+            style={{ color: "var(--blue)", textDecoration: "underline" }}
+          >
+            Connect now
+          </a>
         </div>
       ) : null}
-    </section>
+    </div>
   );
 }

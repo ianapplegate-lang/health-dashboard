@@ -6,8 +6,10 @@ import {
   weightSamples,
   clinicalRecords,
   trainingSessions,
+  oauthTokens,
 } from "@/db/schema";
 import { and, desc, eq, gte, lt, sql, isNotNull } from "drizzle-orm";
+import { fetchWeekCalendarEvents, isHealthRelevant, eventEmoji } from "@/lib/queries/calendar";
 
 function startOfDay(d: Date): Date {
   const r = new Date(d);
@@ -190,11 +192,12 @@ export async function weekActivity(userId: string, ref = new Date()): Promise<{
   weekStart: Date;
   weekEnd: Date;
   items: WeekItem[];
+  calendarConnected: boolean;
 }> {
   const weekStart = startOfWeek(ref);
   const weekEnd = endOfWeek(ref);
 
-  const [ws, ts] = await Promise.all([
+  const [ws, ts, cal, calToken] = await Promise.all([
     db
       .select()
       .from(workouts)
@@ -217,6 +220,12 @@ export async function weekActivity(userId: string, ref = new Date()): Promise<{
         ),
       )
       .orderBy(trainingSessions.plannedFor),
+    fetchWeekCalendarEvents(userId, weekStart, weekEnd),
+    db
+      .select({ id: oauthTokens.id })
+      .from(oauthTokens)
+      .where(and(eq(oauthTokens.userId, userId), eq(oauthTokens.provider, "google-calendar")))
+      .limit(1),
   ]);
 
   const items: WeekItem[] = [];
@@ -243,8 +252,19 @@ export async function weekActivity(userId: string, ref = new Date()): Promise<{
     });
   }
 
+  for (const e of cal) {
+    if (!isHealthRelevant(e)) continue;
+    items.push({
+      source: "calendar",
+      startedAt: e.start,
+      label: e.summary,
+      detail: e.location,
+      emoji: eventEmoji(e.summary),
+    });
+  }
+
   items.sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
-  return { weekStart, weekEnd, items };
+  return { weekStart, weekEnd, items, calendarConnected: calToken.length > 0 };
 }
 
 function sportEmoji(sport: string): string {

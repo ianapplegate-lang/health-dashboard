@@ -1,9 +1,10 @@
 "use client";
 import type { Provider } from "@/db/schema";
 
-const PROVIDERS: { id: Provider; label: string }[] = [
-  { id: "strava", label: "Strava" },
-  { id: "withings", label: "Withings" },
+const PROVIDERS: { id: Provider; label: string; syncable: boolean }[] = [
+  { id: "strava", label: "Strava", syncable: true },
+  { id: "withings", label: "Withings", syncable: true },
+  { id: "google-calendar", label: "Calendar", syncable: false },
 ];
 
 export function ConnectionsRow({ connected }: { connected: Provider[] }) {
@@ -23,12 +24,16 @@ export function ConnectionsRow({ connected }: { connected: Provider[] }) {
             />
             <span className="text-sm">{p.label}</span>
             {isConnected ? (
-              <button
-                onClick={() => sync(p.id)}
-                className="text-xs rounded-full bg-zinc-800 px-2 py-1 hover:bg-zinc-700"
-              >
-                Sync
-              </button>
+              p.syncable ? (
+                <button
+                  onClick={() => sync(p.id)}
+                  className="text-xs rounded-full bg-zinc-800 px-2 py-1 hover:bg-zinc-700"
+                >
+                  Sync
+                </button>
+              ) : (
+                <span className="text-xs text-zinc-500">Connected</span>
+              )
             ) : (
               <a
                 href={`/api/connect/${p.id}`}
