@@ -1,14 +1,18 @@
 "use client";
 import {
   ArcElement,
+  BarController,
   BarElement,
   CategoryScale,
   Chart as ChartJS,
+  DoughnutController,
   Filler,
   Legend,
+  LineController,
   LineElement,
   LinearScale,
   PointElement,
+  ScatterController,
   Tooltip,
 } from "chart.js";
 
@@ -23,6 +27,10 @@ export function registerChartJS() {
     LineElement,
     BarElement,
     ArcElement,
+    LineController,
+    BarController,
+    DoughnutController,
+    ScatterController,
     Tooltip,
     Legend,
     Filler,
