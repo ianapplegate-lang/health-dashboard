@@ -42,7 +42,7 @@ export async function hrvMonthly(userId: string): Promise<MonthlyPoint[]> {
     )
     .groupBy(sql`to_char(${clinicalRecords.recordedAt}::date, 'YYYY-MM')`)
     .orderBy(sql`to_char(${clinicalRecords.recordedAt}::date, 'YYYY-MM')`);
-  return rows.map((r) => ({ ym: r.ym, v: r.avg }));
+  return rows.map((r) => ({ ym: r.ym, v: Number(r.avg) }));
 }
 
 export async function rhrMonthly(userId: string): Promise<MonthlyPoint[]> {
@@ -57,7 +57,7 @@ export async function rhrMonthly(userId: string): Promise<MonthlyPoint[]> {
     )
     .groupBy(sql`to_char(${dailyMetrics.date}::date, 'YYYY-MM')`)
     .orderBy(sql`to_char(${dailyMetrics.date}::date, 'YYYY-MM')`);
-  return rows.map((r) => ({ ym: r.ym, v: r.avg }));
+  return rows.map((r) => ({ ym: r.ym, v: Number(r.avg) }));
 }
 
 export async function exerciseHrMonthly(userId: string, sinceYear = 2022): Promise<HrTrendPoint[]> {
@@ -77,7 +77,7 @@ export async function exerciseHrMonthly(userId: string, sinceYear = 2022): Promi
     )
     .groupBy(sql`to_char(${workouts.startedAt}::date, 'YYYY-MM')`)
     .orderBy(sql`to_char(${workouts.startedAt}::date, 'YYYY-MM')`);
-  return rows.map((r) => ({ ym: r.ym, avgHr: r.avg }));
+  return rows.map((r) => ({ ym: r.ym, avgHr: Number(r.avg) }));
 }
 
 export async function hrvHrStats(userId: string) {
@@ -128,13 +128,13 @@ export async function hrvHrStats(userId: string) {
   ]);
 
   return {
-    hrvAvg: hrvAgg[0]?.avg ?? null,
+    hrvAvg: hrvAgg[0]?.avg != null ? Number(hrvAgg[0].avg) : null,
     hrvNights: hrvAgg[0]?.n ?? 0,
     hrvLatestMonth: hrvLatest[0]?.ym ?? null,
-    hrvLatestMonthAvg: hrvLatest[0]?.avg ?? null,
+    hrvLatestMonthAvg: hrvLatest[0]?.avg != null ? Number(hrvLatest[0].avg) : null,
     rhrClinic: rhrLatestSleep[0]?.valueNumeric ?? null,
     rhrClinicDate: rhrLatestSleep[0]?.recordedAt ?? null,
     rhrDaily: rhrLatestDaily[0]?.rhr ?? null,
-    maxHrEver: maxHr[0]?.max ?? null,
+    maxHrEver: maxHr[0]?.max != null ? Number(maxHr[0].max) : null,
   };
 }
