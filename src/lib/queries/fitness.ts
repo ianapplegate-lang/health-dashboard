@@ -19,6 +19,13 @@ function soccerCategory(s: string): boolean {
   return t === "soccer" || t.includes("football");
 }
 
+function hikeCategory(s: string): boolean {
+  return s.toLowerCase() === "hike";
+}
+function walkCategory(s: string): boolean {
+  return s.toLowerCase() === "walk";
+}
+
 export async function fitnessOverview(userId: string) {
   const [longestRun, ranges] = await Promise.all([
     db
@@ -83,28 +90,41 @@ export async function fitnessOverview(userId: string) {
   };
 }
 
-export async function runRideByYear(userId: string) {
+export type YearSessions = {
+  year: number;
+  run: number;
+  ride: number;
+  workout: number;
+  soccer: number;
+  hike: number;
+  walk: number;
+};
+
+export async function sessionsByYear(userId: string): Promise<YearSessions[]> {
   const rows = await db
     .select({
       year: sql<number>`extract(year from ${workouts.startedAt})::int`,
       sport: workouts.sport,
-      totalM: sql<number>`coalesce(sum(${workouts.distanceM}), 0)`,
+      n: sql<number>`count(*)::int`,
     })
     .from(workouts)
-    .where(and(eq(workouts.userId, userId), isNotNull(workouts.distanceM)))
+    .where(eq(workouts.userId, userId))
     .groupBy(sql`extract(year from ${workouts.startedAt})`, workouts.sport)
     .orderBy(sql`extract(year from ${workouts.startedAt})`);
 
-  type R = { year: number; runKm: number; rideKm: number };
-  const m = new Map<number, R>();
+  const m = new Map<number, YearSessions>();
   for (const r of rows) {
     let v = m.get(r.year);
     if (!v) {
-      v = { year: r.year, runKm: 0, rideKm: 0 };
+      v = { year: r.year, run: 0, ride: 0, workout: 0, soccer: 0, hike: 0, walk: 0 };
       m.set(r.year, v);
     }
-    if (runCategory(r.sport)) v.runKm += Number(r.totalM) / 1000;
-    if (rideCategory(r.sport)) v.rideKm += Number(r.totalM) / 1000;
+    if (runCategory(r.sport)) v.run += r.n;
+    else if (rideCategory(r.sport)) v.ride += r.n;
+    else if (workoutCategory(r.sport)) v.workout += r.n;
+    else if (soccerCategory(r.sport)) v.soccer += r.n;
+    else if (hikeCategory(r.sport)) v.hike += r.n;
+    else if (walkCategory(r.sport)) v.walk += r.n;
   }
   return Array.from(m.values()).sort((a, b) => a.year - b.year);
 }
@@ -115,7 +135,8 @@ export type MonthlyRow = {
   ride: number;
   workout: number;
   soccer: number;
-  other: number;
+  hike: number;
+  walk: number;
 };
 
 export async function monthlySessionsByType(userId: string, sinceYear = 2024): Promise<MonthlyRow[]> {
@@ -135,14 +156,15 @@ export async function monthlySessionsByType(userId: string, sinceYear = 2024): P
   for (const r of rows) {
     let v = m.get(r.ym);
     if (!v) {
-      v = { ym: r.ym, run: 0, ride: 0, workout: 0, soccer: 0, other: 0 };
+      v = { ym: r.ym, run: 0, ride: 0, workout: 0, soccer: 0, hike: 0, walk: 0 };
       m.set(r.ym, v);
     }
     if (runCategory(r.sport)) v.run += r.n;
     else if (rideCategory(r.sport)) v.ride += r.n;
     else if (workoutCategory(r.sport)) v.workout += r.n;
     else if (soccerCategory(r.sport)) v.soccer += r.n;
-    else v.other += r.n;
+    else if (hikeCategory(r.sport)) v.hike += r.n;
+    else if (walkCategory(r.sport)) v.walk += r.n;
   }
   return Array.from(m.values()).sort((a, b) => a.ym.localeCompare(b.ym));
 }

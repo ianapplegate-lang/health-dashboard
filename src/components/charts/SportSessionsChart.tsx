@@ -1,12 +1,12 @@
 "use client";
 import { useState } from "react";
-import { Bar } from "react-chartjs-2";
+import { Line } from "react-chartjs-2";
 import { registerChartJS } from "./setup";
 
 registerChartJS();
 
-export type MonthlyRow = {
-  ym: string;
+export type YearSessions = {
+  year: number;
   run: number;
   ride: number;
   workout: number;
@@ -17,13 +17,13 @@ export type MonthlyRow = {
 
 type Series = "run" | "ride" | "workout" | "soccer" | "hike" | "walk";
 
-const COLORS: Record<Series, { fg: string; bg: string }> = {
-  run: { fg: "#f47067", bg: "rgba(244,112,103,0.8)" },
-  ride: { fg: "#4a9eff", bg: "rgba(74,158,255,0.8)" },
-  workout: { fg: "#a371f7", bg: "rgba(163,113,247,0.8)" },
-  soccer: { fg: "#e3b341", bg: "rgba(227,179,65,0.8)" },
-  hike: { fg: "#1aab7f", bg: "rgba(26,171,127,0.8)" },
-  walk: { fg: "#f778ba", bg: "rgba(247,120,186,0.8)" },
+const COLORS: Record<Series, string> = {
+  run: "#f47067",
+  ride: "#4a9eff",
+  workout: "#a371f7",
+  soccer: "#e3b341",
+  hike: "#1aab7f",
+  walk: "#f778ba",
 };
 
 const LABELS: Record<Series, string> = {
@@ -35,7 +35,7 @@ const LABELS: Record<Series, string> = {
   walk: "Walk",
 };
 
-export function MonthlySessionsChart({ data }: { data: MonthlyRow[] }) {
+export function SportSessionsChart({ data }: { data: YearSessions[] }) {
   const [enabled, setEnabled] = useState<Record<Series, boolean>>({
     run: true,
     ride: true,
@@ -46,35 +46,26 @@ export function MonthlySessionsChart({ data }: { data: MonthlyRow[] }) {
   });
 
   const chart = {
-    labels: data.map((r) => r.ym),
+    labels: data.map((r) => String(r.year)),
     datasets: (Object.keys(COLORS) as Series[])
       .filter((k) => enabled[k])
       .map((k) => ({
         label: LABELS[k],
         data: data.map((r) => r[k]),
-        backgroundColor: COLORS[k].bg,
-        stack: "s",
-        borderRadius: 3,
+        borderColor: COLORS[k],
+        backgroundColor: COLORS[k] + "22",
+        pointRadius: 2,
+        pointBackgroundColor: COLORS[k],
+        tension: 0.3,
       })),
   };
-
   const options = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: { legend: { display: false }, tooltip: { backgroundColor: "#161b22" } },
     scales: {
-      x: {
-        stacked: true,
-        ticks: {
-          color: "#7d8590",
-          maxRotation: 0,
-          autoSkip: true,
-          maxTicksLimit: 12,
-        },
-        grid: { color: "rgba(255,255,255,0.04)" },
-      },
+      x: { ticks: { color: "#7d8590" }, grid: { color: "rgba(255,255,255,0.04)" } },
       y: {
-        stacked: true,
         ticks: { color: "#7d8590" },
         grid: { color: "rgba(255,255,255,0.04)" },
         title: { display: true, text: "Sessions", color: "#7d8590" },
@@ -96,9 +87,9 @@ export function MonthlySessionsChart({ data }: { data: MonthlyRow[] }) {
               style={{
                 padding: "4px 11px",
                 borderRadius: 100,
-                border: `1px solid ${on ? COLORS[k].fg + "55" : "rgba(255,255,255,0.09)"}`,
-                background: on ? COLORS[k].fg + "22" : "transparent",
-                color: on ? COLORS[k].fg : "var(--mu)",
+                border: `1px solid ${on ? COLORS[k] + "55" : "rgba(255,255,255,0.09)"}`,
+                background: on ? COLORS[k] + "22" : "transparent",
+                color: on ? COLORS[k] : "var(--mu)",
                 fontFamily: "var(--fm)",
                 fontSize: 11,
                 cursor: "pointer",
@@ -109,8 +100,8 @@ export function MonthlySessionsChart({ data }: { data: MonthlyRow[] }) {
           );
         })}
       </div>
-      <div style={{ height: 240 }}>
-        <Bar data={chart} options={options} />
+      <div style={{ height: 250 }}>
+        <Line data={chart} options={options} />
       </div>
     </>
   );

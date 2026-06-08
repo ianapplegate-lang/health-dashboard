@@ -1,11 +1,11 @@
 import { getCurrentDbUser } from "@/lib/session";
 import {
   fitnessOverview,
-  runRideByYear,
+  sessionsByYear,
   monthlySessionsByType,
   topRunsByDistance,
 } from "@/lib/queries/fitness";
-import { RunRideChart } from "@/components/charts/RunRideChart";
+import { SportSessionsChart } from "@/components/charts/SportSessionsChart";
 import { MonthlySessionsChart } from "@/components/charts/MonthlySessionsChart";
 
 export const dynamic = "force-dynamic";
@@ -30,9 +30,9 @@ function fmtDuration(sec: number | null) {
 
 export default async function FitnessPage() {
   const user = await getCurrentDbUser();
-  const [overview, runRide, monthly, topRuns] = await Promise.all([
+  const [overview, sessions, monthly, topRuns] = await Promise.all([
     fitnessOverview(user.id),
-    runRideByYear(user.id),
+    sessionsByYear(user.id),
     monthlySessionsByType(user.id, 2024),
     topRunsByDistance(user.id, 10),
   ]);
@@ -73,23 +73,13 @@ export default async function FitnessPage() {
 
       <div className="cs">
         <div className="ct">
-          Running vs cycling — the pivot <span className="src-pill">Strava</span>
+          Sessions per year by sport <span className="src-pill">Strava + Health Connect</span>
         </div>
         <div className="csub">
-          Running km vs cycling km per year — sport mix shifted as cycling rose and
-          running dropped
+          Toggle types · the pivot is visible: running peaked early, cycling and home
+          workouts climbed from 2024 onward
         </div>
-        <div className="leg">
-          <div className="li">
-            <span className="ld" style={{ background: "#f47067" }}></span>Running (km)
-          </div>
-          <div className="li">
-            <span className="ld" style={{ background: "#4a9eff" }}></span>Cycling (km)
-          </div>
-        </div>
-        <div className="cw">
-          <RunRideChart data={runRide} />
-        </div>
+        <SportSessionsChart data={sessions} />
       </div>
 
       <div className="cs">
