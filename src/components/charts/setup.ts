@@ -1,5 +1,7 @@
 "use client";
 import {
+  ArcElement,
+  BarElement,
   CategoryScale,
   Chart as ChartJS,
   Filler,
@@ -8,7 +10,6 @@ import {
   LinearScale,
   PointElement,
   Tooltip,
-  BarElement,
 } from "chart.js";
 
 let registered = false;
@@ -21,6 +22,7 @@ export function registerChartJS() {
     PointElement,
     LineElement,
     BarElement,
+    ArcElement,
     Tooltip,
     Legend,
     Filler,
@@ -28,6 +30,6 @@ export function registerChartJS() {
   ChartJS.defaults.color = "#a1a1aa";
   ChartJS.defaults.borderColor = "#27272a";
   ChartJS.defaults.font.family =
-    "var(--font-geist-sans), system-ui, -apple-system, sans-serif";
+    "var(--font-dm-sans), 'DM Sans', system-ui, sans-serif";
   registered = true;
 }
