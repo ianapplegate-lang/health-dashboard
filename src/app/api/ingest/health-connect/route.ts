@@ -79,18 +79,22 @@ export async function POST(req: NextRequest) {
   let sleepUpserts = 0;
   let workoutUpserts = 0;
 
-  for (const d of body.daily) {
+  // Batch each table into a single multi-row INSERT to avoid sequential round trips
+  // (15 s before -> ~1 s after for typical 30-day / 14-sleep / 33-workout payload).
+
+  if (body.daily.length > 0) {
+    const rows = body.daily.map((d) => ({
+      userId: user.id,
+      date: d.date,
+      steps: d.steps ?? null,
+      activeMinutes: d.activeMinutes ?? null,
+      restingHr: d.restingHr ?? null,
+      caloriesOut: d.caloriesOut ?? null,
+      raw: d,
+    }));
     await db
       .insert(dailyMetrics)
-      .values({
-        userId: user.id,
-        date: d.date,
-        steps: d.steps ?? null,
-        activeMinutes: d.activeMinutes ?? null,
-        restingHr: d.restingHr ?? null,
-        caloriesOut: d.caloriesOut ?? null,
-        raw: d,
-      })
+      .values(rows)
       .onConflictDoUpdate({
         target: [dailyMetrics.userId, dailyMetrics.date],
         set: {
@@ -100,59 +104,58 @@ export async function POST(req: NextRequest) {
           caloriesOut: sql`coalesce(excluded.calories_out, ${dailyMetrics.caloriesOut})`,
         },
       });
-    dailyUpserts++;
+    dailyUpserts = rows.length;
   }
 
-  for (const s of body.sleep) {
+  if (body.sleep.length > 0) {
+    const rows = body.sleep.map((s) => ({
+      userId: user.id,
+      date: s.date,
+      startedAt: new Date(s.startedAt),
+      endedAt: new Date(s.endedAt),
+      durationSec: s.durationSec,
+      deepSec: s.deepSec ?? null,
+      remSec: s.remSec ?? null,
+      lightSec: s.lightSec ?? null,
+      awakeSec: s.awakeSec ?? null,
+      raw: s,
+    }));
     await db
       .insert(sleepSessions)
-      .values({
-        userId: user.id,
-        date: s.date,
-        startedAt: new Date(s.startedAt),
-        endedAt: new Date(s.endedAt),
-        durationSec: s.durationSec,
-        deepSec: s.deepSec ?? null,
-        remSec: s.remSec ?? null,
-        lightSec: s.lightSec ?? null,
-        awakeSec: s.awakeSec ?? null,
-        raw: s,
-      })
+      .values(rows)
       .onConflictDoUpdate({
         target: [sleepSessions.userId, sleepSessions.date],
         set: {
-          startedAt: new Date(s.startedAt),
-          endedAt: new Date(s.endedAt),
-          durationSec: s.durationSec,
-          deepSec: s.deepSec ?? null,
-          remSec: s.remSec ?? null,
-          lightSec: s.lightSec ?? null,
-          awakeSec: s.awakeSec ?? null,
-          raw: s,
+          startedAt: sql`excluded.started_at`,
+          endedAt: sql`excluded.ended_at`,
+          durationSec: sql`excluded.duration_sec`,
+          deepSec: sql`excluded.deep_sec`,
+          remSec: sql`excluded.rem_sec`,
+          lightSec: sql`excluded.light_sec`,
+          awakeSec: sql`excluded.awake_sec`,
+          raw: sql`excluded.raw`,
         },
       });
-    sleepUpserts++;
+    sleepUpserts = rows.length;
   }
 
-  for (const w of body.workouts) {
-    await db
-      .insert(workouts)
-      .values({
-        userId: user.id,
-        provider: "health-connect",
-        externalId: w.externalId,
-        sport: w.sport,
-        startedAt: new Date(w.startedAt),
-        durationSec: w.durationSec ?? null,
-        distanceM: w.distanceM ?? null,
-        avgHr: w.avgHr ?? null,
-        maxHr: w.maxHr ?? null,
-        calories: w.calories ?? null,
-        name: w.name ?? null,
-        raw: w,
-      })
-      .onConflictDoNothing();
-    workoutUpserts++;
+  if (body.workouts.length > 0) {
+    const rows = body.workouts.map((w) => ({
+      userId: user.id,
+      provider: "health-connect" as const,
+      externalId: w.externalId,
+      sport: w.sport,
+      startedAt: new Date(w.startedAt),
+      durationSec: w.durationSec ?? null,
+      distanceM: w.distanceM ?? null,
+      avgHr: w.avgHr ?? null,
+      maxHr: w.maxHr ?? null,
+      calories: w.calories ?? null,
+      name: w.name ?? null,
+      raw: w,
+    }));
+    await db.insert(workouts).values(rows).onConflictDoNothing();
+    workoutUpserts = rows.length;
   }
 
   return NextResponse.json({
