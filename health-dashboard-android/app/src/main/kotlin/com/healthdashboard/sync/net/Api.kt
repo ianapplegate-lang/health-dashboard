@@ -49,11 +49,26 @@ data class WorkoutEntry(
     val name: String? = null,
 )
 
+/**
+ * Raw FHIR resource forwarded from Health Connect's Personal Health Records.
+ * Server parses the JSON and maps to clinical_records.
+ *
+ * `category` is one of: laboratory_results, vital_signs, conditions, medications,
+ * allergies_intolerances, procedures, immunizations, visits.
+ * `fhirJson` is the unmodified FHIR R4 resource as a string.
+ */
+@Serializable
+data class ClinicalEntry(
+    val category: String,
+    val fhirJson: String,
+)
+
 @Serializable
 data class IngestPayload(
     val daily: List<DailyMetric>,
     val sleep: List<SleepEntry>,
     val workouts: List<WorkoutEntry>,
+    val clinical: List<ClinicalEntry> = emptyList(),
 )
 
 @Serializable
@@ -62,6 +77,7 @@ data class IngestResult(
     val dailyUpserts: Int = 0,
     val sleepUpserts: Int = 0,
     val workoutUpserts: Int = 0,
+    val clinicalUpserts: Int = 0,
     val error: String? = null,
 )
 

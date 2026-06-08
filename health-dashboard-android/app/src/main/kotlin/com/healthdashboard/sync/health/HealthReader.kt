@@ -10,6 +10,7 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import com.healthdashboard.sync.net.ClinicalEntry
 import com.healthdashboard.sync.net.DailyMetric
 import com.healthdashboard.sync.net.IngestPayload
 import com.healthdashboard.sync.net.SleepEntry
@@ -27,6 +28,23 @@ object HealthReader {
         HealthPermission.getReadPermission(RestingHeartRateRecord::class),
         HealthPermission.getReadPermission(SleepSessionRecord::class),
         HealthPermission.getReadPermission(ExerciseSessionRecord::class),
+    )
+
+    /**
+     * Medical data permissions are declared in the AndroidManifest as
+     * android.permission.health.READ_MEDICAL_DATA_*. Health Connect's Personal Health
+     * Records (PHR) APIs are alpha and the granted permission set is queried at
+     * runtime from `getGrantedPermissions()`; reads no-op if missing.
+     */
+    val MEDICAL_PERMISSIONS: Set<String> = setOf(
+        "android.permission.health.READ_MEDICAL_DATA_LABORATORY_RESULTS",
+        "android.permission.health.READ_MEDICAL_DATA_VITAL_SIGNS",
+        "android.permission.health.READ_MEDICAL_DATA_CONDITIONS",
+        "android.permission.health.READ_MEDICAL_DATA_MEDICATIONS",
+        "android.permission.health.READ_MEDICAL_DATA_ALLERGIES_INTOLERANCES",
+        "android.permission.health.READ_MEDICAL_DATA_PROCEDURES",
+        "android.permission.health.READ_MEDICAL_DATA_IMMUNIZATIONS",
+        "android.permission.health.READ_MEDICAL_DATA_VISITS",
     )
 
     fun availability(context: Context): Int = HealthConnectClient.getSdkStatus(context)
@@ -53,8 +71,9 @@ object HealthReader {
 
         val sleep = readSleep(client, start, end, zone)
         val workouts = readWorkouts(client, start, end)
+        val clinical = readMedicalResources(client)
 
-        return IngestPayload(daily = daily, sleep = sleep, workouts = workouts)
+        return IngestPayload(daily = daily, sleep = sleep, workouts = workouts, clinical = clinical)
     }
 
     private suspend fun buildDaily(
@@ -141,6 +160,69 @@ object HealthReader {
                 calories = null,
                 name = e.title,
             )
+        }
+    }
+
+    /**
+     * Reads Personal Health Records (FHIR resources) from Health Connect if available.
+     *
+     * Uses reflection so the app still compiles + runs on Health Connect installations
+     * that don't yet expose PHR APIs (the APIs are in alpha and shifted between SDK
+     * versions). If anything fails — class not found, no permissions, no data — return
+     * an empty list silently.
+     */
+    private suspend fun readMedicalResources(
+        client: HealthConnectClient,
+    ): List<ClinicalEntry> {
+        return try {
+            // Try the (currently alpha) MedicalResource API via reflection.
+            val medicalResourceTypeClass =
+                Class.forName("androidx.health.connect.client.records.medicalresource.MedicalResourceType")
+            val readRequestClass = Class.forName(
+                "androidx.health.connect.client.request.ReadMedicalResourcesInitialRequest",
+            )
+            val typeConstants = mapOf(
+                "laboratory_results" to "MEDICAL_RESOURCE_TYPE_LABORATORY_RESULTS",
+                "vital_signs" to "MEDICAL_RESOURCE_TYPE_VITAL_SIGNS",
+                "conditions" to "MEDICAL_RESOURCE_TYPE_CONDITIONS",
+                "medications" to "MEDICAL_RESOURCE_TYPE_MEDICATIONS",
+                "allergies_intolerances" to "MEDICAL_RESOURCE_TYPE_ALLERGIES_INTOLERANCES",
+                "procedures" to "MEDICAL_RESOURCE_TYPE_PROCEDURES",
+                "immunizations" to "MEDICAL_RESOURCE_TYPE_IMMUNIZATIONS",
+                "visits" to "MEDICAL_RESOURCE_TYPE_VISITS",
+            )
+            val results = mutableListOf<ClinicalEntry>()
+            for ((category, constName) in typeConstants) {
+                try {
+                    val constField = medicalResourceTypeClass.getField(constName)
+                    val typeValue = constField.get(null)
+                    val ctor = readRequestClass.getConstructor(typeValue::class.java, Int::class.javaPrimitiveType)
+                    val req = ctor.newInstance(typeValue, 1000)
+                    val readMethod = client::class.java.methods.firstOrNull {
+                        it.name == "readMedicalResources"
+                    } ?: continue
+                    val response = readMethod.invoke(client, req)
+                    val resourcesField = response.javaClass.getMethod("getMedicalResources")
+                    val resources = resourcesField.invoke(response) as? List<*> ?: continue
+                    for (resource in resources) {
+                        val fhirAccessor = resource?.javaClass?.methods?.firstOrNull {
+                            it.name == "getFhirResource" || it.name == "getFhirResourceJson"
+                        }
+                        val fhir = fhirAccessor?.invoke(resource)
+                        val json = fhir?.let {
+                            it::class.java.methods.firstOrNull { m -> m.name == "getData" || m.name == "getJson" }
+                                ?.invoke(it)?.toString()
+                                ?: it.toString()
+                        } ?: continue
+                        results.add(ClinicalEntry(category = category, fhirJson = json))
+                    }
+                } catch (e: Throwable) {
+                    // Skip this category — likely not granted or not available
+                }
+            }
+            results
+        } catch (e: Throwable) {
+            emptyList()
         }
     }
 

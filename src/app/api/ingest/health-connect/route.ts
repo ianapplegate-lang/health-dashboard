@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { dailyMetrics, sleepSessions, workouts } from "@/db/schema";
+import {
+  clinicalRecords,
+  dailyMetrics,
+  sleepSessions,
+  workouts,
+} from "@/db/schema";
 import { getAllowedUserByEmail } from "@/lib/session";
 import { sql } from "drizzle-orm";
+import { parseFhirResource } from "@/lib/import/fhir";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -49,6 +55,14 @@ const Body = z.object({
       }),
     )
     .default([]),
+  clinical: z
+    .array(
+      z.object({
+        category: z.string(),
+        fhirJson: z.string(),
+      }),
+    )
+    .default([]),
 });
 
 export async function POST(req: NextRequest) {
@@ -78,6 +92,7 @@ export async function POST(req: NextRequest) {
   let dailyUpserts = 0;
   let sleepUpserts = 0;
   let workoutUpserts = 0;
+  let clinicalUpserts = 0;
 
   // Batch each table into a single multi-row INSERT to avoid sequential round trips
   // (15 s before -> ~1 s after for typical 30-day / 14-sleep / 33-workout payload).
@@ -174,10 +189,45 @@ export async function POST(req: NextRequest) {
     workoutUpserts = rows.length;
   }
 
+  if (body.clinical.length > 0) {
+    // Parse each FHIR resource. Dedupe by (kind, recordedAt, source) since the
+    // clinical_records unique index is (user, recordedAt, kind, source).
+    const parsedMap = new Map<string, ReturnType<typeof parseFhirResource>>();
+    for (const c of body.clinical) {
+      const parsed = parseFhirResource(c.category, c.fhirJson);
+      if (!parsed) continue;
+      const key = `${parsed.recordedAt.toISOString()}:${parsed.kind}:${parsed.source}`;
+      parsedMap.set(key, parsed);
+    }
+    const parsedRows = Array.from(parsedMap.values()).filter(
+      (p): p is NonNullable<typeof p> => p != null,
+    );
+    if (parsedRows.length > 0) {
+      const rows = parsedRows.map((p) => ({
+        userId: user.id,
+        recordedAt: p.recordedAt,
+        category: p.category,
+        kind: p.kind,
+        valueNumeric: p.valueNumeric,
+        valueText: p.valueText,
+        unit: p.unit,
+        referenceLow: p.referenceLow,
+        referenceHigh: p.referenceHigh,
+        abnormalFlag: p.abnormalFlag,
+        source: p.source,
+        notes: null,
+        raw: p.raw,
+      }));
+      await db.insert(clinicalRecords).values(rows).onConflictDoNothing();
+      clinicalUpserts = rows.length;
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     dailyUpserts,
     sleepUpserts,
     workoutUpserts,
+    clinicalUpserts,
   });
 }

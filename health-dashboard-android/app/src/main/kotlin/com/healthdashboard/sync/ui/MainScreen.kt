@@ -125,7 +125,7 @@ fun MainScreen() {
                                 val payload = HealthReader.readSince(context, days = 30)
                                 val res = Api(settings.serverUrl, settings.ingestToken).ingest(payload)
                                 status = if (res.ok)
-                                    "OK — daily ${res.dailyUpserts}, sleep ${res.sleepUpserts}, workouts ${res.workoutUpserts}"
+                                    "OK — daily ${res.dailyUpserts}, sleep ${res.sleepUpserts}, workouts ${res.workoutUpserts}, clinical ${res.clinicalUpserts}"
                                 else
                                     "Error: ${res.error ?: "unknown"}"
                             } catch (e: Exception) {
