@@ -83,7 +83,10 @@ export async function POST(req: NextRequest) {
   // (15 s before -> ~1 s after for typical 30-day / 14-sleep / 33-workout payload).
 
   if (body.daily.length > 0) {
-    const rows = body.daily.map((d) => ({
+    // Dedupe by date (last one wins).
+    const byDate = new Map<string, (typeof body.daily)[number]>();
+    for (const d of body.daily) byDate.set(d.date, d);
+    const rows = Array.from(byDate.values()).map((d) => ({
       userId: user.id,
       date: d.date,
       steps: d.steps ?? null,
@@ -108,7 +111,17 @@ export async function POST(req: NextRequest) {
   }
 
   if (body.sleep.length > 0) {
-    const rows = body.sleep.map((s) => ({
+    // Health Connect can return multiple sessions per date (main sleep + nap + brief wake).
+    // Postgres ON CONFLICT can only act on a row once per INSERT, so dedupe to one
+    // session per date by keeping the longest (the main nighttime sleep).
+    const byDate = new Map<string, (typeof body.sleep)[number]>();
+    for (const s of body.sleep) {
+      const existing = byDate.get(s.date);
+      if (!existing || s.durationSec > existing.durationSec) {
+        byDate.set(s.date, s);
+      }
+    }
+    const rows = Array.from(byDate.values()).map((s) => ({
       userId: user.id,
       date: s.date,
       startedAt: new Date(s.startedAt),
@@ -140,7 +153,10 @@ export async function POST(req: NextRequest) {
   }
 
   if (body.workouts.length > 0) {
-    const rows = body.workouts.map((w) => ({
+    // Dedupe by externalId in case the source emits the same session twice.
+    const byId = new Map<string, (typeof body.workouts)[number]>();
+    for (const w of body.workouts) byId.set(w.externalId, w);
+    const rows = Array.from(byId.values()).map((w) => ({
       userId: user.id,
       provider: "health-connect" as const,
       externalId: w.externalId,
