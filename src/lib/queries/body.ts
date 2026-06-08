@@ -9,6 +9,8 @@ function notAnomalous() {
 }
 
 export async function allWeightReadings(userId: string) {
+  // Weight itself is generally trustworthy even on rows where body fat / muscle got
+  // flagged as a sensor anomaly. Include every row here.
   const rows = await db
     .select({
       measuredAt: weightSamples.measuredAt,
@@ -18,7 +20,7 @@ export async function allWeightReadings(userId: string) {
       raw: weightSamples.raw,
     })
     .from(weightSamples)
-    .where(and(eq(weightSamples.userId, userId), notAnomalous()))
+    .where(eq(weightSamples.userId, userId))
     .orderBy(asc(weightSamples.measuredAt));
   return rows.map((r) => ({
     date: new Date(r.measuredAt).toISOString().slice(0, 10),
@@ -35,13 +37,14 @@ export async function monthlyAvgWeight(userId: string) {
       avgKg: sql<number>`avg(${weightSamples.weightKg})`,
     })
     .from(weightSamples)
-    .where(and(eq(weightSamples.userId, userId), notAnomalous()))
+    .where(eq(weightSamples.userId, userId))
     .groupBy(sql`to_char(${weightSamples.measuredAt}::date, 'YYYY-MM')`)
     .orderBy(sql`to_char(${weightSamples.measuredAt}::date, 'YYYY-MM')`);
   return rows.map((r) => ({ ym: r.ym, lb: r.avgKg * LB_PER_KG }));
 }
 
 export async function bodyComposition(userId: string) {
+  // For body fat / muscle, only show readings NOT flagged as sensor anomalies.
   const rows = await db
     .select({
       measuredAt: weightSamples.measuredAt,
@@ -71,11 +74,11 @@ export async function bodyMetrics(userId: string) {
     db
       .select({ kg: sql<number>`max(${weightSamples.weightKg})` })
       .from(weightSamples)
-      .where(and(eq(weightSamples.userId, userId), notAnomalous())),
+      .where(eq(weightSamples.userId, userId)),
     db
       .select({ kg: weightSamples.weightKg, measuredAt: weightSamples.measuredAt })
       .from(weightSamples)
-      .where(and(eq(weightSamples.userId, userId), notAnomalous()))
+      .where(eq(weightSamples.userId, userId))
       .orderBy(desc(weightSamples.measuredAt))
       .limit(1),
     db
