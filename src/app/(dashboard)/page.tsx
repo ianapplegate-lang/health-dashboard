@@ -6,11 +6,17 @@ import {
   monthlySteps,
   trainingHeatmapData,
 } from "@/lib/queries/overview-aggregates";
-import { weekActivity } from "@/lib/queries/overview";
+import {
+  weekActivity,
+  latestSleepDetail,
+  nextTrainingSession,
+  recentWorkoutsLite,
+} from "@/lib/queries/overview";
 import { OverviewChart } from "@/components/charts/OverviewChart";
 import { StepsMonthlyChart } from "@/components/charts/StepsMonthlyChart";
 import { TrainingHeatmap } from "@/components/charts/TrainingHeatmap";
 import { WeekActivity } from "@/components/WeekActivity";
+import type { TrainingMovement } from "@/db/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -21,17 +27,75 @@ function fmtRangeYears(min: Date | null, max: Date | null) {
   return `${fmt(min)} → ${fmt(max)}`;
 }
 
+function fmtDuration(sec: number | null) {
+  if (sec == null) return "—";
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  return h ? `${h}h ${m}m` : `${m}m`;
+}
+
+function fmtDistance(m: number | null) {
+  if (m == null || m === 0) return "—";
+  return `${(m / 1000).toFixed(2)} km`;
+}
+
+function sportEmoji(sport: string): string {
+  const s = sport.toLowerCase();
+  if (s === "soccer" || s.includes("football")) return "⚽";
+  if (s === "ride" || s === "virtualride" || s === "ebikeride") return "🚴";
+  if (s === "run" || s === "trailrun") return "🏃";
+  if (s === "hike") return "🥾";
+  if (s === "yoga" || s === "workout") return "🧘";
+  if (s === "snowboard") return "🏂";
+  if (s === "walk") return "🚶";
+  if (s === "weighttraining" || s === "strength") return "💪";
+  return "🏅";
+}
+
+function fmtRelativeDate(d: Date): string {
+  const now = new Date();
+  const diffMs = d.getTime() - now.getTime();
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Tomorrow";
+  if (diffDays === -1) return "Yesterday";
+  if (diffDays > 1 && diffDays < 7) return `In ${diffDays} days`;
+  if (diffDays < -1 && diffDays > -7) return `${Math.abs(diffDays)} days ago`;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 export default async function OverviewPage() {
   const user = await getCurrentDbUser();
 
-  const [metrics, yearVol, yearWeight, steps, heatmap, week] = await Promise.all([
+  const [
+    metrics,
+    yearVol,
+    yearWeight,
+    steps,
+    heatmap,
+    week,
+    latestSleep,
+    nextTraining,
+    recentWorkouts,
+  ] = await Promise.all([
     overviewMetrics(user.id),
     yearActivityVolume(user.id),
     yearAvgWeightLb(user.id),
     monthlySteps(user.id, 2022),
     trainingHeatmapData(user.id, 30),
     weekActivity(user.id),
+    latestSleepDetail(user.id),
+    nextTrainingSession(user.id),
+    recentWorkoutsLite(user.id, 8),
   ]);
+
+  const sleepHours = latestSleep?.durationSec
+    ? (latestSleep.durationSec / 3600).toFixed(1)
+    : null;
+  const sleepEff =
+    latestSleep?.efficiency != null
+      ? Math.round(latestSleep.efficiency * 100)
+      : null;
 
   return (
     <>
@@ -82,14 +146,12 @@ export default async function OverviewPage() {
           </div>
         </div>
         <div className="mc g">
-          <div className="ml">Avg sleep</div>
-          <div className="mv g">
-            {metrics.avgSleepHours != null ? `${metrics.avgSleepHours.toFixed(1)} h` : "—"}
-          </div>
+          <div className="ml">Last night</div>
+          <div className="mv g">{sleepHours ? `${sleepHours} h` : "—"}</div>
           <div className="ms">
-            {metrics.deepPct != null && metrics.remPct != null
-              ? `${Math.round(metrics.deepPct * 100)}% deep · ${Math.round(metrics.remPct * 100)}% REM`
-              : "—"}
+            {latestSleep
+              ? `${new Date(latestSleep.startedAt).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}${sleepEff != null ? ` · ${sleepEff}% eff` : ""}`
+              : "no sleep data"}
           </div>
         </div>
         <div className="mc g">
@@ -104,7 +166,88 @@ export default async function OverviewPage() {
         </div>
       </div>
 
+      {nextTraining ? (
+        <div className="cs">
+          <div className="ct">
+            💪 Next training session — {fmtRelativeDate(nextTraining.plannedFor)}
+          </div>
+          <div className="csub">
+            Session {nextTraining.sessionType} · {nextTraining.plannedFor.toLocaleString("en-US", {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            })}
+            {nextTraining.calendarEventId ? " · synced to Google Calendar" : ""}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
+            {(nextTraining.movements ?? []).map((m: TrainingMovement, i: number) => (
+              <div key={i} className="pc">
+                <div className="pl">
+                  {i + 1}. {m.name}
+                </div>
+                <div className="pv">
+                  {m.sets} sets × {m.repsTarget ?? "?"} reps
+                  {m.weightKg ? ` @ ${(m.weightKg * 2.2046).toFixed(0)} lb` : ""}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       <WeekActivity weekStart={week.weekStart} items={week.items} />
+
+      <div className="cs">
+        <div className="ct">
+          Recent activity <span className="src-pill">Strava + Health Connect</span>
+        </div>
+        <div className="csub">Last {recentWorkouts.length} workouts</div>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+          <thead>
+            <tr style={{ borderBottom: "1px solid var(--b1)" }}>
+              <th style={{ textAlign: "left", padding: "7px 6px", fontFamily: "var(--fm)", fontSize: 10, color: "var(--mu)", textTransform: "uppercase" }}>
+                Date
+              </th>
+              <th style={{ textAlign: "left", padding: "7px 6px", fontFamily: "var(--fm)", fontSize: 10, color: "var(--mu)", textTransform: "uppercase" }}>
+                Activity
+              </th>
+              <th style={{ textAlign: "right", padding: "7px 6px", fontFamily: "var(--fm)", fontSize: 10, color: "var(--mu)", textTransform: "uppercase" }}>
+                Time
+              </th>
+              <th style={{ textAlign: "right", padding: "7px 6px", fontFamily: "var(--fm)", fontSize: 10, color: "var(--mu)", textTransform: "uppercase" }}>
+                Dist
+              </th>
+              <th style={{ textAlign: "right", padding: "7px 6px", fontFamily: "var(--fm)", fontSize: 10, color: "var(--mu)", textTransform: "uppercase" }}>
+                HR
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentWorkouts.map((w) => (
+              <tr key={w.id} style={{ borderBottom: "1px solid var(--b0)" }}>
+                <td style={{ padding: "6px", fontFamily: "var(--fm)", fontSize: 10, color: "var(--mu)" }}>
+                  {new Date(w.startedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                </td>
+                <td style={{ padding: "6px" }}>
+                  <span style={{ marginRight: 6 }}>{sportEmoji(w.sport)}</span>
+                  {w.name ?? w.sport}
+                </td>
+                <td style={{ padding: "6px", textAlign: "right", fontFamily: "var(--fm)", fontSize: 11 }}>
+                  {fmtDuration(w.durationSec)}
+                </td>
+                <td style={{ padding: "6px", textAlign: "right", fontFamily: "var(--fm)", fontSize: 11 }}>
+                  {fmtDistance(w.distanceM)}
+                </td>
+                <td style={{ padding: "6px", textAlign: "right", fontFamily: "var(--fm)", fontSize: 11 }}>
+                  {w.avgHr ?? "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <div className="cs">
         <div className="ct">
@@ -137,9 +280,9 @@ export default async function OverviewPage() {
 
       <div className="cs">
         <div className="ct">
-          Daily steps — monthly average <span className="src-pill">Withings</span>
+          Daily steps — monthly average <span className="src-pill">Google Fit</span>
         </div>
-        <div className="csub">From daily_metrics — fills in once Health Connect syncs</div>
+        <div className="csub">From daily_metrics — fills in further once Health Connect syncs</div>
         <div className="cw">
           <StepsMonthlyChart data={steps} />
         </div>

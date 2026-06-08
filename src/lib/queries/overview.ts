@@ -142,6 +142,7 @@ export async function recentWorkoutsLite(userId: string, limit = 8) {
       startedAt: workouts.startedAt,
       durationSec: workouts.durationSec,
       distanceM: workouts.distanceM,
+      avgHr: workouts.avgHr,
       name: workouts.name,
       provider: workouts.provider,
     })
@@ -149,6 +150,31 @@ export async function recentWorkoutsLite(userId: string, limit = 8) {
     .where(eq(workouts.userId, userId))
     .orderBy(desc(workouts.startedAt))
     .limit(limit);
+}
+
+export async function nextTrainingSession(userId: string) {
+  const rows = await db
+    .select()
+    .from(trainingSessions)
+    .where(
+      and(
+        eq(trainingSessions.userId, userId),
+        gte(trainingSessions.plannedFor, new Date()),
+      ),
+    )
+    .orderBy(trainingSessions.plannedFor)
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function latestSleepDetail(userId: string) {
+  const rows = await db
+    .select()
+    .from(sleepSessions)
+    .where(eq(sleepSessions.userId, userId))
+    .orderBy(desc(sleepSessions.startedAt))
+    .limit(1);
+  return rows[0] ?? null;
 }
 
 export type WeekItem = {
