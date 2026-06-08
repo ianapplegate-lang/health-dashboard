@@ -5,22 +5,25 @@ import {
   bodyComposition,
   bodyMetrics,
 } from "@/lib/queries/body";
+import { bodyInsights } from "@/lib/queries/insights";
 import { WeightScatter } from "@/components/charts/WeightScatter";
 import {
   BodyFatChart,
   MuscleChart,
   RecompScatter,
 } from "@/components/charts/BodyCompChart";
+import { InsightGrid, InsightStat, InsightCallout } from "@/components/Insight";
 
 export const dynamic = "force-dynamic";
 
 export default async function BodyPage() {
   const user = await getCurrentDbUser();
-  const [metrics, readings, monthly, composition] = await Promise.all([
+  const [metrics, readings, monthly, composition, insights] = await Promise.all([
     bodyMetrics(user.id),
     allWeightReadings(user.id),
     monthlyAvgWeight(user.id),
     bodyComposition(user.id),
+    bodyInsights(user.id),
   ]);
 
   const stableLowLb = metrics.latestLb;
@@ -68,6 +71,39 @@ export default async function BodyPage() {
           </div>
           <div className="ms">held flat throughout loss</div>
         </div>
+      </div>
+
+      <div className="cs">
+        <div className="ct">📊 Insights</div>
+        <div className="csub">Derived from your weight + body comp history</div>
+        <InsightGrid>
+          <InsightStat
+            label="Weeks at current"
+            value={insights.weeksAtCurrent != null ? `${insights.weeksAtCurrent} wk` : "—"}
+            detail="within ±2 lb of latest"
+            tone="good"
+          />
+          <InsightStat
+            label="Peak loss rate"
+            value={
+              insights.peakLossLbPerWeek != null
+                ? `${insights.peakLossLbPerWeek.toFixed(2)} lb/wk`
+                : "—"
+            }
+            detail="fastest 4-week stretch"
+          />
+          <InsightStat
+            label="Days since peak"
+            value={insights.daysSincePeak != null ? `${insights.daysSincePeak}` : "—"}
+            detail="from highest reading"
+          />
+        </InsightGrid>
+        {insights.weeksAtCurrent != null && insights.weeksAtCurrent >= 12 ? (
+          <InsightCallout tone="good">
+            ✅ You&apos;ve held within ±2 lb for {insights.weeksAtCurrent} weeks — that&apos;s
+            the maintenance phase doing its job. Bodyweight is now your set point.
+          </InsightCallout>
+        ) : null}
       </div>
 
       <div className="cs">

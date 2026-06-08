@@ -12,6 +12,8 @@ import {
   nextTrainingSession,
   recentWorkoutsLite,
 } from "@/lib/queries/overview";
+import { overviewInsights } from "@/lib/queries/insights";
+import { InsightGrid, InsightStat, InsightCallout } from "@/components/Insight";
 import { OverviewChart } from "@/components/charts/OverviewChart";
 import { StepsMonthlyChart } from "@/components/charts/StepsMonthlyChart";
 import { TrainingHeatmap } from "@/components/charts/TrainingHeatmap";
@@ -77,6 +79,7 @@ export default async function OverviewPage() {
     latestSleep,
     nextTraining,
     recentWorkouts,
+    insights,
   ] = await Promise.all([
     overviewMetrics(user.id),
     yearActivityVolume(user.id),
@@ -87,6 +90,7 @@ export default async function OverviewPage() {
     latestSleepDetail(user.id),
     nextTrainingSession(user.id),
     recentWorkoutsLite(user.id, 8),
+    overviewInsights(user.id),
   ]);
 
   const sleepHours = latestSleep?.durationSec
@@ -196,6 +200,49 @@ export default async function OverviewPage() {
           </div>
         </div>
       ) : null}
+
+      <div className="cs">
+        <div className="ct">📊 Insights</div>
+        <div className="csub">This week at a glance</div>
+        <InsightGrid>
+          <InsightStat
+            label="Workout streak"
+            value={`${insights.workoutStreak} d`}
+            detail="consecutive days"
+            tone={insights.workoutStreak >= 5 ? "good" : "default"}
+          />
+          <InsightStat
+            label="Workouts this wk"
+            value={`${insights.thisWeekWorkouts}`}
+            detail={`vs ${insights.lastWeekWorkouts} last wk`}
+            tone={
+              insights.thisWeekWorkouts > insights.lastWeekWorkouts
+                ? "good"
+                : insights.thisWeekWorkouts < insights.lastWeekWorkouts
+                ? "warn"
+                : "default"
+            }
+          />
+          <InsightStat
+            label="Active min this wk"
+            value={`${insights.thisWeekMinutes}`}
+            detail={`vs ${insights.lastWeekMinutes} last wk`}
+          />
+        </InsightGrid>
+        {insights.workoutStreak >= 7 ? (
+          <InsightCallout tone="good">
+            🔥 {insights.workoutStreak}-day workout streak. Keep going — your training
+            heatmap below shows the rhythm building.
+          </InsightCallout>
+        ) : null}
+        {insights.thisWeekWorkouts < insights.lastWeekWorkouts &&
+        insights.thisWeekWorkouts < 3 ? (
+          <InsightCallout tone="warn">
+            📉 Down from {insights.lastWeekWorkouts} to {insights.thisWeekWorkouts} workouts
+            this week. Recovery week or did life get in the way?
+          </InsightCallout>
+        ) : null}
+      </div>
 
       <WeekActivity
         weekStart={week.weekStart}

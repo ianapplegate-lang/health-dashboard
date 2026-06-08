@@ -9,6 +9,8 @@ import {
 import { HrvChart } from "@/components/charts/HrvChart";
 import { HrvRhrChart } from "@/components/charts/HrvRhrChart";
 import { ExerciseHrChart } from "@/components/charts/ExerciseHrChart";
+import { hrvInsights } from "@/lib/queries/insights";
+import { InsightGrid, InsightStat, InsightCallout } from "@/components/Insight";
 
 export const dynamic = "force-dynamic";
 
@@ -19,12 +21,13 @@ function fmtMonth(d: Date | null) {
 
 export default async function HrvPage() {
   const user = await getCurrentDbUser();
-  const [nightly, hrvM, rhrM, exHr, stats] = await Promise.all([
+  const [nightly, hrvM, rhrM, exHr, stats, insights] = await Promise.all([
     nightlyHrv(user.id),
     hrvMonthly(user.id),
     rhrMonthly(user.id),
     exerciseHrMonthly(user.id, 2022),
     hrvHrStats(user.id),
+    hrvInsights(user.id),
   ]);
 
   return (
@@ -67,6 +70,61 @@ export default async function HrvPage() {
           </div>
           <div className="ms">workouts table</div>
         </div>
+      </div>
+
+      <div className="cs">
+        <div className="ct">📊 Insights</div>
+        <div className="csub">Recent trend vs baseline, plus sleep correlation</div>
+        <InsightGrid>
+          <InsightStat
+            label="Last 7 nights"
+            value={insights.avg7d != null ? `${insights.avg7d.toFixed(1)} ms` : "—"}
+            detail={
+              insights.avg7d != null && insights.baseline != null
+                ? `vs ${insights.baseline.toFixed(1)} ms baseline`
+                : undefined
+            }
+            tone={
+              insights.avg7d != null && insights.baseline != null
+                ? insights.avg7d > insights.baseline
+                  ? "good"
+                  : insights.avg7d < insights.baseline * 0.9
+                  ? "warn"
+                  : "default"
+                : "default"
+            }
+          />
+          <InsightStat
+            label="Last 30 nights"
+            value={insights.avg30d != null ? `${insights.avg30d.toFixed(1)} ms` : "—"}
+            detail="rolling monthly avg"
+          />
+          <InsightStat
+            label="Baseline"
+            value={insights.baseline != null ? `${insights.baseline.toFixed(1)} ms` : "—"}
+            detail="first 30 nights tracked"
+          />
+        </InsightGrid>
+
+        {insights.hrvBySleepBucket ? (
+          (() => {
+            const { good, ok, short } = insights.hrvBySleepBucket;
+            if (good.n + ok.n + short.n < 10) return null;
+            const lines: string[] = [];
+            if (good.avg != null) lines.push(`≥7h sleep → ${good.avg.toFixed(1)} ms (${good.n}n)`);
+            if (ok.avg != null) lines.push(`6–7h → ${ok.avg.toFixed(1)} ms (${ok.n}n)`);
+            if (short.avg != null) lines.push(`<6h → ${short.avg.toFixed(1)} ms (${short.n}n)`);
+            const gap = good.avg != null && short.avg != null ? good.avg - short.avg : null;
+            return (
+              <InsightCallout>
+                💤 HRV by sleep length: {lines.join(" · ")}.
+                {gap != null && Math.abs(gap) > 3
+                  ? ` Sleeping ≥7h gives you ${gap > 0 ? "+" : ""}${gap.toFixed(1)} ms over short nights.`
+                  : ""}
+              </InsightCallout>
+            );
+          })()
+        ) : null}
       </div>
 
       <div className="cs">

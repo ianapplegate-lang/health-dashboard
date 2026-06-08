@@ -1,18 +1,30 @@
 import { getCurrentDbUser } from "@/lib/session";
 import { sleepOverview, nightlySleepSeries } from "@/lib/queries/sleep";
+import { sleepInsights } from "@/lib/queries/insights";
 import { SleepDurationChart } from "@/components/charts/SleepDurationChart";
 import { SleepStagesDonut } from "@/components/charts/SleepStagesDonut";
 import { DeepSleepBars } from "@/components/charts/DeepSleepBars";
 import { SleepHeatmap } from "@/components/charts/SleepHeatmap";
+import { InsightGrid, InsightStat, InsightCallout } from "@/components/Insight";
 
 export const dynamic = "force-dynamic";
 
 export default async function SleepPage() {
   const user = await getCurrentDbUser();
-  const [overview, nights] = await Promise.all([
+  const [overview, nights, insights] = await Promise.all([
     sleepOverview(user.id),
     nightlySleepSeries(user.id),
+    sleepInsights(user.id),
   ]);
+
+  const worstDow = insights.byDow.length
+    ? insights.byDow
+        .filter((d) => d.avgHours != null && d.count >= 3)
+        .reduce<{ day: string; avgHours: number | null; count: number } | null>(
+          (w, d) => (w == null || (d.avgHours ?? Infinity) < (w.avgHours ?? Infinity) ? d : w),
+          null,
+        )
+    : null;
 
   const deepBars = nights.map((n) => ({
     date: n.date,
@@ -73,6 +85,86 @@ export default async function SleepPage() {
           </div>
           <div className="ms">time asleep / time in bed</div>
         </div>
+      </div>
+
+      <div className="cs">
+        <div className="ct">📊 Insights</div>
+        <div className="csub">Patterns across your sleep history</div>
+        <InsightGrid>
+          <InsightStat
+            label="Best night (30d)"
+            value={
+              insights.bestNight ? `${insights.bestNight.hours.toFixed(1)} h` : "—"
+            }
+            detail={
+              insights.bestNight
+                ? `${insights.bestNight.date}${insights.bestNight.quality != null ? ` · ${Math.round(insights.bestNight.quality * 100)}% quality` : ""}`
+                : undefined
+            }
+            tone="good"
+          />
+          <InsightStat
+            label="Worst night (30d)"
+            value={
+              insights.worstNight ? `${insights.worstNight.hours.toFixed(1)} h` : "—"
+            }
+            detail={insights.worstNight?.date}
+            tone="bad"
+          />
+          <InsightStat
+            label="Avg last 7d"
+            value={insights.avg7d != null ? `${insights.avg7d.toFixed(1)} h` : "—"}
+            detail={
+              insights.avg7d != null && insights.avg30d != null
+                ? `vs ${insights.avg30d.toFixed(1)} h 30d`
+                : undefined
+            }
+            tone={
+              insights.avg7d != null && insights.avg30d != null
+                ? insights.avg7d >= insights.avg30d
+                  ? "good"
+                  : "warn"
+                : "default"
+            }
+          />
+          <InsightStat
+            label="Short nights (30d)"
+            value={`${insights.shortNightsLast30 ?? "—"}`}
+            detail="under 6 hours"
+            tone={
+              (insights.shortNightsLast30 ?? 0) > 7
+                ? "bad"
+                : (insights.shortNightsLast30 ?? 0) > 3
+                ? "warn"
+                : "good"
+            }
+          />
+        </InsightGrid>
+
+        {worstDow ? (
+          <InsightCallout>
+            🗓️ {worstDow.day}s are your worst sleep day on average —{" "}
+            {worstDow.avgHours?.toFixed(1)} h vs the other days. (across {worstDow.count}{" "}
+            {worstDow.day} nights tracked)
+          </InsightCallout>
+        ) : null}
+
+        {insights.satAfterFridayFootball ? (
+          (() => {
+            const { satAvg, satAfterFootballAvg, n } = insights.satAfterFridayFootball;
+            const diff = satAfterFootballAvg - satAvg;
+            const pct = Math.abs((diff / satAvg) * 100);
+            return (
+              <InsightCallout tone={diff < -0.2 ? "warn" : "good"}>
+                ⚽ Saturdays after Friday football average {satAfterFootballAvg.toFixed(1)} h —{" "}
+                {diff < 0
+                  ? `${pct.toFixed(0)}% less than your typical Saturday (${satAvg.toFixed(1)} h)`
+                  : `comparable to your typical Saturday (${satAvg.toFixed(1)} h)`}
+                . Based on {n} Saturday{n === 1 ? "" : "s"}.
+              </InsightCallout>
+            );
+          })()
+        ) : null}
       </div>
 
       <div className="cs">

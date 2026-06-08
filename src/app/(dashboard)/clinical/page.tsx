@@ -10,6 +10,8 @@ import {
 } from "@/lib/queries/clinical";
 import { EnzymeChart } from "@/components/charts/EnzymeChart";
 import { FibrosisIndicator } from "@/components/clinical/FibrosisIndicator";
+import { clinicalInsights } from "@/lib/queries/insights";
+import { InsightGrid, InsightStat, InsightCallout } from "@/components/Insight";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +34,7 @@ export default async function ClinicalPage() {
     imaging,
     biopsy,
     bpVitals,
+    insights,
   ] = await Promise.all([
     labLatest(user.id, "ALT"),
     labLatest(user.id, "AST"),
@@ -43,6 +46,7 @@ export default async function ClinicalPage() {
     imagingRecords(user.id),
     biopsyRecord(user.id),
     preProcedureVitals(user.id),
+    clinicalInsights(user.id),
   ]);
 
   const fibrosis = biopsy ? fibrosisRange(biopsy.valueText) : null;
@@ -92,6 +96,59 @@ export default async function ClinicalPage() {
             HR {bpHr?.valueNumeric ?? "—"} · {fmtMonth(bp?.recordedAt ?? null)}
           </div>
         </div>
+      </div>
+
+      <div className="cs">
+        <div className="ct">📊 Insights</div>
+        <div className="csub">ALT trajectory + days since last lab</div>
+        <InsightGrid>
+          <InsightStat
+            label="Days since last ALT"
+            value={insights.daysSinceLastAlt != null ? `${insights.daysSinceLastAlt}` : "—"}
+            detail={
+              insights.daysSinceLastAlt != null && insights.daysSinceLastAlt > 90
+                ? "next labs recommended"
+                : undefined
+            }
+            tone={
+              insights.daysSinceLastAlt != null && insights.daysSinceLastAlt > 180
+                ? "warn"
+                : "default"
+            }
+          />
+          <InsightStat
+            label="Latest ALT vs ULN"
+            value={
+              insights.ulnPct != null
+                ? `${insights.ulnPct.toFixed(0)}%`
+                : "—"
+            }
+            detail={
+              insights.latestAlt != null ? `${insights.latestAlt} U/L · ULN 50` : undefined
+            }
+            tone={
+              insights.ulnPct != null
+                ? insights.ulnPct < 100
+                  ? "good"
+                  : insights.ulnPct < 130
+                  ? "warn"
+                  : "bad"
+                : "default"
+            }
+          />
+          <InsightStat
+            label="ALT trajectory"
+            value={insights.trajectory ?? "—"}
+            detail="last 3 readings"
+            tone={
+              insights.trajectory === "falling"
+                ? "good"
+                : insights.trajectory === "rising"
+                ? "warn"
+                : "default"
+            }
+          />
+        </InsightGrid>
       </div>
 
       <div className="cs">
