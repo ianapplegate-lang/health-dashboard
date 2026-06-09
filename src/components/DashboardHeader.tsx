@@ -1,79 +1,145 @@
 import { db } from "@/db/client";
-import { clinicalRecords, workouts } from "@/db/schema";
-import { and, eq, sql, isNotNull, desc } from "drizzle-orm";
+import {
+  clinicalRecords,
+  dailyMetrics,
+  sleepSessions,
+  workouts,
+} from "@/db/schema";
+import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { UserButton } from "@clerk/nextjs";
 
 export async function DashboardHeader({ userId }: { userId: string }) {
-  // Header badges are derived from clinical + workout state with fall-through narrative strings.
-  const [activityRange, hrvAvg, latestFibrosis, latestAfib] = await Promise.all([
+  const [latestSleep, latestHrv, latestRhr, workoutDays] = await Promise.all([
     db
-      .select({
-        n: sql<number>`count(*)::int`,
-        min: sql<Date | null>`min(${workouts.startedAt})`,
-        max: sql<Date | null>`max(${workouts.startedAt})`,
-      })
-      .from(workouts)
-      .where(eq(workouts.userId, userId)),
-    db
-      .select({ avg: sql<number | null>`avg(${clinicalRecords.valueNumeric})` })
-      .from(clinicalRecords)
-      .where(
-        and(
-          eq(clinicalRecords.userId, userId),
-          eq(clinicalRecords.kind, "HRV_RMSSD"),
-        ),
-      ),
+      .select()
+      .from(sleepSessions)
+      .where(eq(sleepSessions.userId, userId))
+      .orderBy(desc(sleepSessions.startedAt))
+      .limit(1),
     db
       .select()
       .from(clinicalRecords)
       .where(
         and(
           eq(clinicalRecords.userId, userId),
-          eq(clinicalRecords.kind, "LiverBiopsy"),
+          eq(clinicalRecords.kind, "HRV_RMSSD"),
+          isNotNull(clinicalRecords.valueNumeric),
         ),
       )
       .orderBy(desc(clinicalRecords.recordedAt))
       .limit(1),
     db
-      .select({ n: sql<number>`count(*)::int` })
-      .from(clinicalRecords)
+      .select()
+      .from(dailyMetrics)
       .where(
-        and(
-          eq(clinicalRecords.userId, userId),
-          eq(clinicalRecords.kind, "AFib_episode"),
-          isNotNull(clinicalRecords.valueNumeric),
-        ),
-      ),
+        and(eq(dailyMetrics.userId, userId), isNotNull(dailyMetrics.restingHr)),
+      )
+      .orderBy(desc(dailyMetrics.date))
+      .limit(1),
+    db
+      .select({
+        day: sql<string>`to_char(${workouts.startedAt}::date, 'YYYY-MM-DD')`,
+      })
+      .from(workouts)
+      .where(eq(workouts.userId, userId))
+      .groupBy(sql`to_char(${workouts.startedAt}::date, 'YYYY-MM-DD')`)
+      .orderBy(desc(sql`to_char(${workouts.startedAt}::date, 'YYYY-MM-DD')`))
+      .limit(60),
   ]);
 
-  const hrv = hrvAvg[0]?.avg;
-  const fibrosisText = latestFibrosis[0]?.valueText ?? null;
-  const fibrosisBadge = fibrosisText
-    ? /stage 0|stage 1|stage 0-1|stage 0–1/i.test(fibrosisText)
-      ? "Fibrosis 0–1"
-      : "Biopsy on file"
+  // Sleep
+  const sleepHours = latestSleep[0]?.durationSec
+    ? +(latestSleep[0].durationSec / 3600).toFixed(1)
     : null;
-  const afibBadge = (latestAfib[0]?.n ?? 0) === 0 ? "No AFib detected" : `${latestAfib[0]?.n} AFib`;
+  const sleepTone =
+    sleepHours == null
+      ? "default"
+      : sleepHours >= 7
+      ? "good"
+      : sleepHours >= 6
+      ? "warn"
+      : "bad";
+
+  // HRV — compare last night to 30-day avg
+  const hrvValue = latestHrv[0]?.valueNumeric ?? null;
+  const hrvAvgRow = await db
+    .select({ avg: sql<number | null>`avg(${clinicalRecords.valueNumeric})` })
+    .from(clinicalRecords)
+    .where(
+      and(
+        eq(clinicalRecords.userId, userId),
+        eq(clinicalRecords.kind, "HRV_RMSSD"),
+      ),
+    );
+  const hrvAvg = hrvAvgRow[0]?.avg != null ? Number(hrvAvgRow[0].avg) : null;
+  const hrvTone =
+    hrvValue == null || hrvAvg == null
+      ? "default"
+      : hrvValue >= hrvAvg
+      ? "good"
+      : hrvValue < hrvAvg * 0.85
+      ? "warn"
+      : "default";
+
+  // RHR
+  const rhrValue = latestRhr[0]?.restingHr ?? null;
+
+  // Workout streak
+  const daysWithWorkout = new Set(workoutDays.map((r) => r.day));
+  let streak = 0;
+  const today = new Date();
+  let countingFromToday = true;
+  for (let i = 0; i < 60; i++) {
+    const d = new Date(today);
+    d.setUTCDate(d.getUTCDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    if (daysWithWorkout.has(key)) {
+      streak++;
+      countingFromToday = false;
+    } else if (i === 0 && countingFromToday) {
+      continue; // give today a pass
+    } else {
+      break;
+    }
+  }
+  const streakTone =
+    streak >= 5 ? "good" : streak >= 2 ? "default" : streak === 0 ? "warn" : "default";
+
+  const badgeClass = (tone: "good" | "warn" | "bad" | "default") => {
+    if (tone === "good") return "bdg bt";
+    if (tone === "warn") return "bdg ba";
+    if (tone === "bad") return "bdg br";
+    return "bdg bb";
+  };
 
   return (
     <div className="hdr">
       <div>
         <div className="htitle">Health Dashboard</div>
         <div className="hsub">
-          Ian R. Applegate · Strava · Withings · Health Connect · Clinical records
-          {activityRange[0]?.n
-            ? ` · ${activityRange[0].n.toLocaleString()} activities`
-            : ""}
+          Ian R. Applegate · Strava · Withings · Health Connect · Kaiser
         </div>
       </div>
-      <div className="hbdg" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <div className="hbdg">
-          {fibrosisBadge ? <span className="bdg bt">{fibrosisBadge}</span> : null}
-          <span className="bdg bb">Antiviral active</span>
-          <span className="bdg bt">{afibBadge}</span>
-          {hrv != null ? (
-            <span className="bdg bp">HRV {Math.round(hrv)} ms avg</span>
+          {sleepHours != null ? (
+            <span className={badgeClass(sleepTone)}>
+              😴 {sleepHours} h
+            </span>
           ) : null}
+          {hrvValue != null ? (
+            <span className={badgeClass(hrvTone)}>
+              ❤️ HRV {Math.round(hrvValue)} ms
+            </span>
+          ) : null}
+          {rhrValue != null ? (
+            <span className={badgeClass("good")}>
+              💗 RHR {rhrValue} bpm
+            </span>
+          ) : null}
+          <span className={badgeClass(streakTone)}>
+            🔥 {streak}d streak
+          </span>
         </div>
         <UserButton afterSignOutUrl="/sign-in" />
       </div>
