@@ -10,14 +10,15 @@ export function EnzymeChart({
   alt,
   ast,
   albumin,
+  biopsyDate = "2026-03-26",
   antiviralStart = "2026-04-07",
 }: {
   alt: EnzymePoint[];
   ast: EnzymePoint[];
   albumin: EnzymePoint[];
+  biopsyDate?: string;
   antiviralStart?: string;
 }) {
-  // Build a unified date axis (sorted unique dates across all three series).
   const allDates = Array.from(
     new Set([...alt, ...ast, ...albumin].map((p) => p.date)),
   ).sort();
@@ -27,7 +28,26 @@ export function EnzymeChart({
     return allDates.map((d) => m.get(d) ?? null);
   };
 
-  const antiviralIndex = allDates.findIndex((d) => d >= antiviralStart);
+  function dateToFraction(targetIso: string): number | null {
+    if (allDates.length < 2) return null;
+    const t = new Date(targetIso).getTime();
+    const first = new Date(allDates[0]).getTime();
+    const last = new Date(allDates[allDates.length - 1]).getTime();
+    if (t <= first) return 0;
+    if (t >= last) return 1;
+    for (let i = 0; i < allDates.length - 1; i++) {
+      const a = new Date(allDates[i]).getTime();
+      const b = new Date(allDates[i + 1]).getTime();
+      if (t >= a && t <= b) {
+        const seg = (t - a) / (b - a);
+        return (i + seg) / (allDates.length - 1);
+      }
+    }
+    return null;
+  }
+
+  const biopsyFrac = dateToFraction(biopsyDate);
+  const antiviralFrac = dateToFraction(antiviralStart);
 
   const data = {
     labels: allDates,
@@ -78,7 +98,6 @@ export function EnzymeChart({
     plugins: {
       legend: { display: false },
       tooltip: { backgroundColor: "#161b22", borderColor: "rgba(255,255,255,0.09)", borderWidth: 1 },
-      annotation: undefined, // placeholder if we wire annotations later
     },
     scales: {
       x: {
@@ -107,23 +126,67 @@ export function EnzymeChart({
   return (
     <div style={{ height: 265, position: "relative" }}>
       <Chart type="line" data={data} options={options} />
-      {antiviralIndex >= 0 ? (
+      {biopsyFrac != null ? (
         <div
           style={{
             position: "absolute",
-            bottom: 30,
-            left: `${(antiviralIndex / Math.max(1, allDates.length - 1)) * 92 + 4}%`,
-            fontSize: 9,
-            color: "#e3b341",
-            fontFamily: "var(--fm)",
-            background: "rgba(227,179,65,0.1)",
-            padding: "1px 5px",
-            borderRadius: 4,
-            border: "1px solid rgba(227,179,65,0.3)",
+            top: 0,
+            bottom: 28,
+            left: `${biopsyFrac * 92 + 4}%`,
+            width: 1,
+            background: "rgba(74,158,255,0.4)",
             pointerEvents: "none",
           }}
         >
-          antiviral
+          <div
+            style={{
+              position: "absolute",
+              top: 2,
+              left: 4,
+              fontSize: 9,
+              color: "#4a9eff",
+              fontFamily: "var(--fm)",
+              whiteSpace: "nowrap",
+              background: "rgba(74,158,255,0.1)",
+              padding: "1px 5px",
+              borderRadius: 3,
+              border: "1px solid rgba(74,158,255,0.3)",
+            }}
+          >
+            biopsy
+          </div>
+        </div>
+      ) : null}
+      {antiviralFrac != null ? (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            bottom: 28,
+            left: `${antiviralFrac * 92 + 4}%`,
+            width: 1,
+            background: "rgba(26,171,127,0.45)",
+            borderLeft: "1px dashed rgba(26,171,127,0.5)",
+            pointerEvents: "none",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              top: 16,
+              left: 4,
+              fontSize: 9,
+              color: "#1aab7f",
+              fontFamily: "var(--fm)",
+              whiteSpace: "nowrap",
+              background: "rgba(26,171,127,0.1)",
+              padding: "1px 5px",
+              borderRadius: 3,
+              border: "1px solid rgba(26,171,127,0.3)",
+            }}
+          >
+            antiviral
+          </div>
         </div>
       ) : null}
     </div>
