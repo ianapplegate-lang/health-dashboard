@@ -93,6 +93,21 @@ export async function imagingRecords(userId: string) {
     .orderBy(asc(clinicalRecords.recordedAt));
 }
 
+export type UltrasoundSeverity = "normal" | "mild" | "moderate" | "unknown";
+
+function classifyUltrasound(text: string | null): UltrasoundSeverity {
+  if (!text) return "unknown";
+  const t = text.toLowerCase();
+  const concerning = /hyperechoic|heterogeneous|diffuse hepatocellular|nodular|fatty liver/.test(t);
+  const mild = /coarse|mild/.test(t);
+  const benign =
+    /(homogeneous|negative\s*exam|essentially normal)/.test(t) && !concerning && !mild;
+  if (concerning) return "moderate";
+  if (mild) return "mild";
+  if (benign) return "normal";
+  return "unknown";
+}
+
 export async function liverLengthSeries(userId: string) {
   const rows = await db
     .select({
@@ -114,6 +129,7 @@ export async function liverLengthSeries(userId: string) {
       date: new Date(r.recordedAt).toISOString().slice(0, 10),
       cm: r.cm as number,
       notes: r.notes ?? null,
+      severity: classifyUltrasound(r.notes ?? null),
     }));
 }
 
