@@ -6,9 +6,11 @@ import {
   labLatest,
   labPeak,
   labSeries,
+  liverLengthSeries,
   preProcedureVitals,
 } from "@/lib/queries/clinical";
 import { EnzymeChart } from "@/components/charts/EnzymeChart";
+import { LiverLengthChart } from "@/components/charts/LiverLengthChart";
 import { FibrosisIndicator } from "@/components/clinical/FibrosisIndicator";
 import { clinicalInsights } from "@/lib/queries/insights";
 import { InsightGrid, InsightStat, InsightCallout } from "@/components/Insight";
@@ -35,6 +37,7 @@ export default async function ClinicalPage() {
     biopsy,
     bpVitals,
     insights,
+    liverLengths,
   ] = await Promise.all([
     labLatest(user.id, "ALT"),
     labLatest(user.id, "AST"),
@@ -47,6 +50,7 @@ export default async function ClinicalPage() {
     biopsyRecord(user.id),
     preProcedureVitals(user.id),
     clinicalInsights(user.id),
+    liverLengthSeries(user.id),
   ]);
 
   const fibrosis = biopsy ? fibrosisRange(biopsy.valueText) : null;
@@ -183,7 +187,10 @@ export default async function ClinicalPage() {
             Liver length — ultrasound <span className="src-pill">Kaiser</span>
           </div>
           <div className="csub">
-            All scans · normal adult male ~14–18 cm
+            All scans · normal adult male ~14–18 cm (green band)
+          </div>
+          <div className="cw">
+            <LiverLengthChart points={liverLengths} />
           </div>
           {imaging.length === 0 ? (
             <div className="note">No ultrasound records yet</div>

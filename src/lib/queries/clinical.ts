@@ -93,6 +93,30 @@ export async function imagingRecords(userId: string) {
     .orderBy(asc(clinicalRecords.recordedAt));
 }
 
+export async function liverLengthSeries(userId: string) {
+  const rows = await db
+    .select({
+      recordedAt: clinicalRecords.recordedAt,
+      cm: clinicalRecords.valueNumeric,
+      notes: clinicalRecords.valueText,
+    })
+    .from(clinicalRecords)
+    .where(
+      and(
+        eq(clinicalRecords.userId, userId),
+        eq(clinicalRecords.kind, "LiverUltrasound"),
+      ),
+    )
+    .orderBy(asc(clinicalRecords.recordedAt));
+  return rows
+    .filter((r) => r.cm != null)
+    .map((r) => ({
+      date: new Date(r.recordedAt).toISOString().slice(0, 10),
+      cm: r.cm as number,
+      notes: r.notes ?? null,
+    }));
+}
+
 export async function biopsyRecord(userId: string) {
   const rows = await db
     .select()
