@@ -75,15 +75,31 @@ export function LiverLengthChart({ points }: { points: LiverPoint[] }) {
     ],
   };
 
-  // Index of biopsy + antiviral within the date axis (for inline markers)
+  // Date-based interpolation between labels so a marker at e.g. Mar 26 lands
+  // 60% of the way between the Dec-25 and Jun-26 scans instead of snapping to
+  // the next label.
+  function dateToFraction(targetIso: string): number | null {
+    if (labels.length < 2) return null;
+    const t = new Date(targetIso).getTime();
+    const first = new Date(labels[0]).getTime();
+    const last = new Date(labels[labels.length - 1]).getTime();
+    if (t <= first) return 0;
+    if (t >= last) return 1;
+    for (let i = 0; i < labels.length - 1; i++) {
+      const a = new Date(labels[i]).getTime();
+      const b = new Date(labels[i + 1]).getTime();
+      if (t >= a && t <= b) {
+        const seg = (t - a) / (b - a);
+        return (i + seg) / (labels.length - 1);
+      }
+    }
+    return null;
+  }
+
   const biopsyDate = "2026-03-26";
   const antiviralDate = "2026-04-07";
-  function findIdx(d: string): number {
-    for (let i = 0; i < labels.length; i++) if (labels[i] >= d) return i;
-    return -1;
-  }
-  const biopsyIdx = findIdx(biopsyDate);
-  const antiviralIdx = findIdx(antiviralDate);
+  const biopsyFrac = dateToFraction(biopsyDate);
+  const antiviralFrac = dateToFraction(antiviralDate);
 
   const options = {
     responsive: true,
@@ -131,13 +147,13 @@ export function LiverLengthChart({ points }: { points: LiverPoint[] }) {
     <>
       <div style={{ height: 240, position: "relative" }}>
         <Line data={data} options={options} />
-        {biopsyIdx >= 0 && labels.length > 1 ? (
+        {biopsyFrac != null ? (
           <div
             style={{
               position: "absolute",
               top: 0,
               bottom: 24,
-              left: `${(biopsyIdx / (labels.length - 1)) * 92 + 4}%`,
+              left: `${biopsyFrac * 92 + 4}%`,
               width: 1,
               background: "rgba(74,158,255,0.4)",
               pointerEvents: "none",
@@ -161,13 +177,13 @@ export function LiverLengthChart({ points }: { points: LiverPoint[] }) {
             </div>
           </div>
         ) : null}
-        {antiviralIdx >= 0 && labels.length > 1 ? (
+        {antiviralFrac != null ? (
           <div
             style={{
               position: "absolute",
               top: 0,
               bottom: 24,
-              left: `${(antiviralIdx / (labels.length - 1)) * 92 + 4}%`,
+              left: `${antiviralFrac * 92 + 4}%`,
               width: 1,
               background: "rgba(26,171,127,0.45)",
               borderLeft: "1px dashed rgba(26,171,127,0.5)",
