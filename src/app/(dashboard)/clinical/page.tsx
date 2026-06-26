@@ -1,6 +1,7 @@
 import { getCurrentDbUser } from "@/lib/session";
 import {
   biopsyRecord,
+  cbcSeries,
   fibrosisRange,
   imagingRecords,
   labLatest,
@@ -11,6 +12,7 @@ import {
 } from "@/lib/queries/clinical";
 import { EnzymeChart } from "@/components/charts/EnzymeChart";
 import { LiverLengthChart } from "@/components/charts/LiverLengthChart";
+import { CbcTrendChart } from "@/components/charts/CbcTrendChart";
 import { FibrosisIndicator } from "@/components/clinical/FibrosisIndicator";
 import { clinicalInsights } from "@/lib/queries/insights";
 import { InsightGrid, InsightStat, InsightCallout } from "@/components/Insight";
@@ -38,6 +40,12 @@ export default async function ClinicalPage() {
     bpVitals,
     insights,
     liverLengths,
+    hemoglobin,
+    platelets,
+    wbc,
+    neutrophils,
+    lymphocytes,
+    eosinophils,
   ] = await Promise.all([
     labLatest(user.id, "ALT"),
     labLatest(user.id, "AST"),
@@ -51,6 +59,12 @@ export default async function ClinicalPage() {
     preProcedureVitals(user.id),
     clinicalInsights(user.id),
     liverLengthSeries(user.id),
+    cbcSeries(user.id, "Hemoglobin"),
+    cbcSeries(user.id, "Platelets"),
+    cbcSeries(user.id, "WBC"),
+    cbcSeries(user.id, "Neutrophils_abs"),
+    cbcSeries(user.id, "Lymphocytes_abs"),
+    cbcSeries(user.id, "Eosinophils_abs"),
   ]);
 
   const fibrosis = biopsy ? fibrosisRange(biopsy.valueText) : null;
@@ -253,6 +267,32 @@ export default async function ClinicalPage() {
               </div>
             </div>
           ) : null}
+        </div>
+      </div>
+
+      <div className="cs" style={{ background: "transparent", border: "none", padding: 0 }}>
+        <div className="ct" style={{ marginBottom: 8, paddingLeft: 4 }}>
+          Complete Blood Count — trends <span className="src-pill">Kaiser Permanente</span>
+        </div>
+        <div className="csub" style={{ paddingLeft: 4 }}>
+          Hemoglobin recovery + platelet trajectory are the meaningful signals to track
+        </div>
+        <div className="g3">
+          <CbcTrendChart title="Hemoglobin" points={hemoglobin} unit="gm/dL" color="#f47067" />
+          <CbcTrendChart title="Platelets" points={platelets} unit="x10⁹/L" color="#4a9eff" />
+          <CbcTrendChart title="WBC" points={wbc} unit="x10⁹/L" color="#1aab7f" />
+        </div>
+        <div className="g3">
+          <CbcTrendChart title="Neutrophils (ANC)" points={neutrophils} unit="x10⁹/L" color="#a371f7" />
+          <CbcTrendChart title="Lymphocytes" points={lymphocytes} unit="x10⁹/L" color="#e3b341" />
+          <CbcTrendChart title="Eosinophils" points={eosinophils} unit="x10⁹/L" color="#f778ba" />
+        </div>
+        <div className="note">
+          🩸 Platelets have drifted from 276 → 228 over 2 years. Still well above the 150
+          watch-threshold for portal hypertension, but the trajectory is worth re-checking
+          in 6 months. Hemoglobin recovery from the March dip (12.7 → 13.1) is the
+          reassuring counter-signal. WBC and neutrophils stable through the antiviral
+          start — no marrow suppression.
         </div>
       </div>
 

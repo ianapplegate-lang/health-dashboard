@@ -93,6 +93,47 @@ export async function imagingRecords(userId: string) {
     .orderBy(asc(clinicalRecords.recordedAt));
 }
 
+export type CbcSeriesPoint = {
+  date: string;
+  value: number;
+  refLow: number | null;
+  refHigh: number | null;
+  abnormal: string | null;
+};
+
+export async function cbcSeries(userId: string, kind: string): Promise<CbcSeriesPoint[]> {
+  const rows = await db
+    .select({
+      recordedAt: clinicalRecords.recordedAt,
+      v: clinicalRecords.valueNumeric,
+      lo: clinicalRecords.referenceLow,
+      hi: clinicalRecords.referenceHigh,
+      flag: clinicalRecords.abnormalFlag,
+    })
+    .from(clinicalRecords)
+    .where(and(eq(clinicalRecords.userId, userId), eq(clinicalRecords.kind, kind)))
+    .orderBy(asc(clinicalRecords.recordedAt));
+  return rows
+    .filter((r) => r.v != null)
+    .map((r) => ({
+      date: new Date(r.recordedAt).toISOString().slice(0, 10),
+      value: r.v as number,
+      refLow: r.lo,
+      refHigh: r.hi,
+      abnormal: r.flag,
+    }));
+}
+
+export async function cbcLatest(userId: string, kind: string) {
+  const rows = await db
+    .select()
+    .from(clinicalRecords)
+    .where(and(eq(clinicalRecords.userId, userId), eq(clinicalRecords.kind, kind)))
+    .orderBy(desc(clinicalRecords.recordedAt))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
 export type UltrasoundSeverity = "normal" | "mild" | "moderate" | "unknown";
 
 function classifyUltrasound(text: string | null): UltrasoundSeverity {
