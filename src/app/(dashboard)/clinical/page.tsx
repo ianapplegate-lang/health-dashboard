@@ -46,6 +46,12 @@ export default async function ClinicalPage() {
     neutrophils,
     lymphocytes,
     eosinophils,
+    egfr,
+    creatinine,
+    totalBili,
+    ferritinSeries,
+    ironSeries,
+    ironSatSeries,
   ] = await Promise.all([
     labLatest(user.id, "ALT"),
     labLatest(user.id, "AST"),
@@ -65,6 +71,12 @@ export default async function ClinicalPage() {
     cbcSeries(user.id, "Neutrophils_abs"),
     cbcSeries(user.id, "Lymphocytes_abs"),
     cbcSeries(user.id, "Eosinophils_abs"),
+    labLatest(user.id, "eGFR"),
+    labLatest(user.id, "Creatinine"),
+    labLatest(user.id, "TotalBili"),
+    cbcSeries(user.id, "Ferritin"),
+    cbcSeries(user.id, "Iron_serum"),
+    cbcSeries(user.id, "IronSaturation"),
   ]);
 
   const fibrosis = biopsy ? fibrosisRange(biopsy.valueText) : null;
@@ -113,6 +125,39 @@ export default async function ClinicalPage() {
           <div className="ms">
             HR {bpHr?.valueNumeric ?? "—"} · {fmtMonth(bp?.recordedAt ?? null)}
           </div>
+        </div>
+      </div>
+
+      <div className="mrow">
+        <div className="mc g">
+          <div className="ml">eGFR</div>
+          <div className="mv g">{egfr?.valueNumeric ?? "—"}</div>
+          <div className="ms">mL/min · excellent kidneys</div>
+        </div>
+        <div className="mc w">
+          <div className="ml">Creatinine</div>
+          <div className="mv w">{creatinine?.valueNumeric ?? "—"}</div>
+          <div className="ms">{creatinine?.unit ?? "mg/dL"} · {fmtMonth(creatinine?.recordedAt ?? null)}</div>
+        </div>
+        <div className="mc g">
+          <div className="ml">Total Bilirubin</div>
+          <div className="mv g">{totalBili?.valueNumeric ?? "—"}</div>
+          <div className="ms">{totalBili?.unit ?? "mg/dL"} · {fmtMonth(totalBili?.recordedAt ?? null)}</div>
+        </div>
+        <div className="mc a">
+          <div className="ml">Ferritin</div>
+          <div className="mv a">{ferritinSeries[ferritinSeries.length - 1]?.value ?? "—"}</div>
+          <div className="ms">ng/mL · ↓ from 112 (Sep 2024)</div>
+        </div>
+        <div className="mc g">
+          <div className="ml">Iron Sat.</div>
+          <div className="mv g">{ironSatSeries[ironSatSeries.length - 1]?.value ?? "—"}%</div>
+          <div className="ms">normal range 20–50%</div>
+        </div>
+        <div className="mc g">
+          <div className="ml">Vitamin B12</div>
+          <div className="mv g">933</div>
+          <div className="ms">pg/mL · stable</div>
         </div>
       </div>
 
@@ -173,7 +218,7 @@ export default async function ClinicalPage() {
         <div className="ct">
           Liver enzymes over time <span className="src-pill">Kaiser Permanente</span>
         </div>
-        <div className="csub">Dashed orange marker = antiviral start ~Apr 2026</div>
+        <div className="csub">Dashed orange marker = antiviral start ~Apr 2026 · ALT normalized to ULN (50) Jun 2026</div>
         <div className="leg">
           <div className="li">
             <span className="ld" style={{ background: "#f47067" }}></span>ALT (ULN 50)
@@ -293,6 +338,26 @@ export default async function ClinicalPage() {
           in 6 months. Hemoglobin recovery from the March dip (12.7 → 13.1) is the
           reassuring counter-signal. WBC and neutrophils stable through the antiviral
           start — no marrow suppression.
+        </div>
+      </div>
+
+      <div className="cs" style={{ background: "transparent", border: "none", padding: 0 }}>
+        <div className="ct" style={{ marginBottom: 8, paddingLeft: 4 }}>
+          Iron &amp; nutrients <span className="src-pill">Kaiser Permanente</span>
+        </div>
+        <div className="csub" style={{ paddingLeft: 4 }}>
+          Ferritin trending down — watch alongside microcytic RBC pattern
+        </div>
+        <div className="g3">
+          <CbcTrendChart title="Ferritin" points={ferritinSeries} unit="ng/mL" color="#e3b341" />
+          <CbcTrendChart title="Serum Iron" points={ironSeries} unit="mcg/dL" color="#f47067" />
+          <CbcTrendChart title="Iron Saturation" points={ironSatSeries} unit="%" color="#4a9eff" />
+        </div>
+        <div className="note">
+          🔋 Ferritin dropped from 112 → 62 ng/mL over 21 months (still in range, floor is 35).
+          Combined with persistently low MCV/MCH and elevated RBC count, this pattern is consistent
+          with thalassemia trait as a baseline — but the falling ferritin suggests iron stores are
+          under mild pressure on top of that. Iron supplementation worth discussing at the next visit.
         </div>
       </div>
 
