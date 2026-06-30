@@ -49,7 +49,7 @@ export default async function BodyPage() {
               ? `${stableLowLb.toFixed(0)}–${stableHighLb.toFixed(0)}`
               : "—"}
           </div>
-          <div className="ms">lb, stable since recent stretch</div>
+          <div className="ms">lb · last: {metrics.latestWeightDate ? new Date(metrics.latestWeightDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}</div>
         </div>
         <div className="mc g">
           <div className="ml">Fat lost</div>

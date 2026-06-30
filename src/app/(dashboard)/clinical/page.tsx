@@ -53,6 +53,7 @@ export default async function ClinicalPage() {
     ironSeries,
     ironSatSeries,
     hbvLatest,
+    hbvSeries,
   ] = await Promise.all([
     labLatest(user.id, "ALT"),
     labLatest(user.id, "AST"),
@@ -79,6 +80,7 @@ export default async function ClinicalPage() {
     cbcSeries(user.id, "Iron_serum"),
     cbcSeries(user.id, "IronSaturation"),
     labLatest(user.id, "HBV_DNA"),
+    cbcSeries(user.id, "HBV_DNA_log10"),
   ]);
 
   const fibrosis = biopsy ? fibrosisRange(biopsy.valueText) : null;
@@ -105,7 +107,7 @@ export default async function ClinicalPage() {
         <div className="mc g">
           <div className="ml">Albumin</div>
           <div className="mv g">{albuminLatest?.valueNumeric ?? "—"}</div>
-          <div className="ms">{albuminLatest?.unit ?? "gm/dL"} — never wavered</div>
+          <div className="ms">{albuminLatest?.unit ?? "gm/dL"} · {fmtMonth(albuminLatest?.recordedAt ?? null)}</div>
         </div>
         <div className="mc a">
           <div className="ml">Peak ALT</div>
@@ -362,6 +364,30 @@ export default async function ClinicalPage() {
           Combined with persistently low MCV/MCH and elevated RBC count, this pattern is consistent
           with thalassemia trait as a baseline — but the falling ferritin suggests iron stores are
           under mild pressure on top of that. Iron supplementation worth discussing at the next visit.
+        </div>
+      </div>
+
+      <div className="cs">
+        <div className="ct">
+          HBV DNA viral load <span className="src-pill">Kaiser Permanente</span>
+        </div>
+        <div className="csub">
+          Log10 IU/mL · target = undetectable (&lt;1.0) · antiviral started ~Apr 2026
+        </div>
+        <div className="g3">
+          <CbcTrendChart
+            title="HBV DNA (Log10)"
+            points={hbvSeries}
+            unit="LogIU/mL"
+            color="#1aab7f"
+            yMin={0}
+            yMax={8}
+          />
+        </div>
+        <div className="note">
+          🧬 As of Jun 2026, HBV DNA is Not Detected (&lt;10 IU/mL, Log10 &lt;1.0) — the
+          gold-standard treatment response. Pre-treatment baseline will plot here once added.
+          The green band shows the undetectable target zone (below 1.0).
         </div>
       </div>
 

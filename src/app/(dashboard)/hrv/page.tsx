@@ -54,7 +54,7 @@ export default async function HrvPage() {
           <div className="mv g">
             {stats.rhrDaily != null ? `${stats.rhrDaily} bpm` : "—"}
           </div>
-          <div className="ms">latest Health Connect</div>
+          <div className="ms">{stats.rhrDailyDate ?? "Health Connect"}</div>
         </div>
         <div className="mc g">
           <div className="ml">Resting HR (clinic)</div>

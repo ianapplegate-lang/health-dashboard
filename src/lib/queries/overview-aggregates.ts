@@ -133,6 +133,7 @@ export async function overviewMetrics(userId: string) {
     latestBf,
     bfDelta,
     latestRhr: latestRhrRow[0]?.rhr ?? null,
+    latestRhrDate: latestRhrRow[0]?.date ?? null,
     hrvAvg: hrvAvgRow[0]?.avg ?? null,
     hrvN: hrvAvgRow[0]?.n ?? 0,
     avgSleepHours,

@@ -116,7 +116,7 @@ export async function hrvHrStats(userId: string) {
       .orderBy(desc(clinicalRecords.recordedAt))
       .limit(1),
     db
-      .select({ rhr: dailyMetrics.restingHr })
+      .select({ rhr: dailyMetrics.restingHr, date: dailyMetrics.date })
       .from(dailyMetrics)
       .where(and(eq(dailyMetrics.userId, userId), isNotNull(dailyMetrics.restingHr)))
       .orderBy(desc(dailyMetrics.date))
@@ -135,6 +135,7 @@ export async function hrvHrStats(userId: string) {
     rhrClinic: rhrLatestSleep[0]?.valueNumeric ?? null,
     rhrClinicDate: rhrLatestSleep[0]?.recordedAt ?? null,
     rhrDaily: rhrLatestDaily[0]?.rhr ?? null,
+    rhrDailyDate: rhrLatestDaily[0]?.date ?? null,
     maxHrEver: maxHr[0]?.max != null ? Number(maxHr[0].max) : null,
   };
 }

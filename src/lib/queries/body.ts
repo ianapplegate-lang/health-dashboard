@@ -133,6 +133,7 @@ export async function bodyMetrics(userId: string) {
 
   const peakLb = peak[0]?.kg ? peak[0].kg * LB_PER_KG : null;
   const latestLb = latest[0]?.kg ? latest[0].kg * LB_PER_KG : null;
+  const latestWeightDate = latest[0]?.measuredAt ?? null;
   const earliestBfPct = earliestBf[0]?.bf ?? null;
   const latestBfPct = latestBf[0]?.bf ?? null;
   const earliestMuscleLb = earliestMuscle[0]?.kg ? earliestMuscle[0].kg * LB_PER_KG : null;
@@ -147,5 +148,6 @@ export async function bodyMetrics(userId: string) {
     bfDelta: earliestBfPct != null && latestBfPct != null ? latestBfPct - earliestBfPct : null,
     earliestMuscleLb,
     latestMuscleLb,
+    latestWeightDate,
   };
 }

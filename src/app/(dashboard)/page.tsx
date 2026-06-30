@@ -1,4 +1,8 @@
 import { getCurrentDbUser } from "@/lib/session";
+import { db } from "@/db/client";
+import { oauthTokens } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { ConnectionsRow } from "@/components/ConnectionsRow";
 import {
   overviewMetrics,
   yearActivityVolume,
@@ -69,6 +73,12 @@ function fmtRelativeDate(d: Date): string {
 export default async function OverviewPage() {
   const user = await getCurrentDbUser();
 
+  const tokenRows = await db
+    .select({ provider: oauthTokens.provider })
+    .from(oauthTokens)
+    .where(eq(oauthTokens.userId, user.id));
+  const connected = tokenRows.map((t) => t.provider);
+
   const [
     metrics,
     yearVol,
@@ -103,6 +113,9 @@ export default async function OverviewPage() {
 
   return (
     <>
+      <div style={{ marginBottom: 16 }}>
+        <ConnectionsRow connected={connected} />
+      </div>
       <div className="mrow">
         <div className="mc b">
           <div className="ml">Activities</div>
@@ -138,7 +151,7 @@ export default async function OverviewPage() {
         <div className="mc g">
           <div className="ml">Resting HR</div>
           <div className="mv g">{metrics.latestRhr ?? "—"}{metrics.latestRhr ? " bpm" : ""}</div>
-          <div className="ms">latest from Health Connect</div>
+          <div className="ms">{metrics.latestRhrDate ?? "Health Connect"}</div>
         </div>
         <div className="mc p">
           <div className="ml">HRV RMSSD</div>
