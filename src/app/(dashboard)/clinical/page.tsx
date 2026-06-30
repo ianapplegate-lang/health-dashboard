@@ -52,6 +52,7 @@ export default async function ClinicalPage() {
     ferritinSeries,
     ironSeries,
     ironSatSeries,
+    hbvLatest,
   ] = await Promise.all([
     labLatest(user.id, "ALT"),
     labLatest(user.id, "AST"),
@@ -77,6 +78,7 @@ export default async function ClinicalPage() {
     cbcSeries(user.id, "Ferritin"),
     cbcSeries(user.id, "Iron_serum"),
     cbcSeries(user.id, "IronSaturation"),
+    labLatest(user.id, "HBV_DNA"),
   ]);
 
   const fibrosis = biopsy ? fibrosisRange(biopsy.valueText) : null;
@@ -132,7 +134,7 @@ export default async function ClinicalPage() {
         <div className="mc g">
           <div className="ml">eGFR</div>
           <div className="mv g">{egfr?.valueNumeric ?? "—"}</div>
-          <div className="ms">mL/min · excellent kidneys</div>
+          <div className="ms">mL/min · {fmtMonth(egfr?.recordedAt ?? null)}</div>
         </div>
         <div className="mc w">
           <div className="ml">Creatinine</div>
@@ -147,17 +149,19 @@ export default async function ClinicalPage() {
         <div className="mc a">
           <div className="ml">Ferritin</div>
           <div className="mv a">{ferritinSeries[ferritinSeries.length - 1]?.value ?? "—"}</div>
-          <div className="ms">ng/mL · ↓ from 112 (Sep 2024)</div>
+          <div className="ms">ng/mL · {ferritinSeries[ferritinSeries.length - 1]?.date?.slice(0, 7) ?? "—"} · ↓ from 112</div>
         </div>
         <div className="mc g">
           <div className="ml">Iron Sat.</div>
           <div className="mv g">{ironSatSeries[ironSatSeries.length - 1]?.value ?? "—"}%</div>
-          <div className="ms">normal range 20–50%</div>
+          <div className="ms">{ironSatSeries[ironSatSeries.length - 1]?.date?.slice(0, 7) ?? "—"} · 20–50% normal</div>
         </div>
         <div className="mc g">
-          <div className="ml">Vitamin B12</div>
-          <div className="mv g">933</div>
-          <div className="ms">pg/mL · stable</div>
+          <div className="ml">HBV DNA</div>
+          <div className="mv g" style={{ fontSize: 12, marginTop: 3 }}>
+            {hbvLatest?.valueText ?? (hbvLatest?.valueNumeric != null ? `<${hbvLatest.valueNumeric} IU/mL` : "—")}
+          </div>
+          <div className="ms">{fmtMonth(hbvLatest?.recordedAt ?? null)} · Roche COBAS</div>
         </div>
       </div>
 
