@@ -97,7 +97,8 @@ export default async function FitnessPage() {
             Top 10 runs by distance <span className="src-pill">Strava</span>
           </div>
         </div>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+        <div className="tscroll">
+        <table style={{ width: "100%", minWidth: 420, borderCollapse: "collapse", fontSize: 12 }}>
           <thead>
             <tr style={{ borderBottom: "1px solid var(--b1)" }}>
               <th
@@ -242,6 +243,7 @@ export default async function FitnessPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </>
   );

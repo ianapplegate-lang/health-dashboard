@@ -133,7 +133,8 @@ export default async function TrainingPage() {
             Progressive loading — each week&apos;s focus is written in the calendar event description
           </div>
         </div>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+        <div className="tscroll">
+        <table style={{ width: "100%", minWidth: 380, borderCollapse: "collapse", fontSize: 12 }}>
           <thead>
             <tr style={{ borderBottom: "1px solid var(--b1)" }}>
               <th
@@ -255,12 +256,14 @@ export default async function TrainingPage() {
             })}
           </tbody>
         </table>
+        </div>
       </div>
 
       <div className="cs">
         <div className="ct">🗓️ Why these days — scheduling logic</div>
         <div className="csub">Built around your actual calendar, sleep pattern, and recovery needs</div>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+        <div className="tscroll">
+        <table style={{ width: "100%", minWidth: 360, borderCollapse: "collapse", fontSize: 12 }}>
           <tbody>
             <tr style={{ borderBottom: "1px solid var(--b0)" }}>
               <td style={{ padding: "7px 11px", fontFamily: "var(--fm)", color: "var(--teal)", width: 140 }}>
@@ -327,6 +330,7 @@ export default async function TrainingPage() {
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
 
       <div className="cs">

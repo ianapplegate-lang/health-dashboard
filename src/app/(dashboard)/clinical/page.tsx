@@ -260,7 +260,8 @@ export default async function ClinicalPage() {
           {imaging.length === 0 ? (
             <div className="note">No ultrasound records yet</div>
           ) : (
-            <table style={{ width: "100%", marginTop: 8, fontSize: 12 }}>
+            <div className="tscroll">
+            <table style={{ width: "100%", minWidth: 300, marginTop: 8, fontSize: 12 }}>
               <tbody>
                 {imaging.map((s) => (
                   <tr key={s.id} style={{ borderBottom: "1px solid var(--b0)" }}>
@@ -288,6 +289,7 @@ export default async function ClinicalPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
         <div className="cs">
@@ -299,7 +301,7 @@ export default async function ClinicalPage() {
           </div>
           <FibrosisIndicator range={fibrosis} />
           {biopsy ? (
-            <div className="pgrid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
+            <div className="pgrid" style={{ marginTop: 10 }}>
               <div className="pc">
                 <div className="pl">Trichrome</div>
                 <div className="pv">Minimal fibrous expansion</div>

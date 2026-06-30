@@ -198,7 +198,7 @@ export default async function OverviewPage() {
             })}
             {nextTraining.calendarEventId ? " · synced to Google Calendar" : ""}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
+          <div className="pgrid" style={{ marginTop: 10 }}>
             {(nextTraining.movements ?? []).map((m: TrainingMovement, i: number) => (
               <div key={i} className="pc">
                 <div className="pl">
@@ -268,7 +268,8 @@ export default async function OverviewPage() {
           Recent activity <span className="src-pill">Strava + Health Connect</span>
         </div>
         <div className="csub">Last {recentWorkouts.length} workouts</div>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+        <div className="tscroll">
+        <table style={{ width: "100%", minWidth: 380, borderCollapse: "collapse", fontSize: 12 }}>
           <thead>
             <tr style={{ borderBottom: "1px solid var(--b1)" }}>
               <th style={{ textAlign: "left", padding: "7px 6px", fontFamily: "var(--fm)", fontSize: 10, color: "var(--mu)", textTransform: "uppercase" }}>
@@ -311,6 +312,7 @@ export default async function OverviewPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       <div className="cs">

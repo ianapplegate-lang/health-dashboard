@@ -258,10 +258,45 @@ html, body {
     margin-bottom: 4px;
   }
   .pv { font-size: 12px; color: var(--tx); margin-bottom: 5px; }
+
+  /* Responsive 2-col grid that collapses on mobile */
+  .pgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  /* Horizontally scrollable table wrapper */
+  .tscroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 }
 
 @media (max-width: 640px) {
-  .hdr, .main, .nav { padding-left: 13px; padding-right: 13px; }
+  /* Header */
+  .hdr { padding: 10px 13px; }
+  .hsub { display: none; }
+  .htitle { font-size: 14px; }
+  .bdg { font-size: 9px; padding: 2px 7px; }
+  .hbdg { gap: 4px; }
+
+  /* Nav — hide scrollbar, touch momentum */
+  .nav { padding: 0; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .nav::-webkit-scrollbar { display: none; }
+  .ntab { padding: 10px 13px; font-size: 12px; }
+
+  /* Main content */
+  .main { padding: 13px; }
+
+  /* Metric row — 2-up on mobile */
+  .mrow { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mc { padding: 10px 11px; }
+  .mv { font-size: 19px; }
+
+  /* Section cards */
+  .cs { padding: 13px; }
+
+  /* Grids collapse to single column */
   .g2, .g3 { grid-template-columns: 1fr; }
-  .mrow { grid-template-columns: 1fr 1fr; }
+
+  /* Movement grid collapses to single column */
+  .pgrid { grid-template-columns: 1fr; }
+
+  /* Heatmap — smaller cells, no hover transform on touch */
+  .hmcell { width: 13px; height: 13px; }
+  .hmcell:hover { transform: none; }
 }
