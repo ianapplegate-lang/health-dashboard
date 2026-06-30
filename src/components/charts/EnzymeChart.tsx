@@ -52,6 +52,45 @@ export function EnzymeChart({
   const data = {
     labels: allDates,
     datasets: [
+      // Reference bands — rendered behind main lines (order: 10)
+      {
+        type: "line" as const,
+        label: "_normUL",
+        data: allDates.map(() => 40),
+        borderColor: "rgba(255,255,255,0.18)",
+        borderDash: [4, 4] as number[],
+        borderWidth: 1,
+        pointRadius: 0,
+        fill: false as const,
+        yAxisID: "y",
+        order: 10,
+      },
+      {
+        type: "line" as const,
+        label: "_albHigh",
+        data: allDates.map(() => 5.0),
+        borderColor: "rgba(26,171,127,0.25)",
+        borderDash: [4, 4] as number[],
+        borderWidth: 1,
+        pointRadius: 0,
+        fill: "+1" as unknown as false,
+        backgroundColor: "rgba(26,171,127,0.07)",
+        yAxisID: "y1",
+        order: 10,
+      },
+      {
+        type: "line" as const,
+        label: "_albLow",
+        data: allDates.map(() => 3.5),
+        borderColor: "rgba(26,171,127,0.25)",
+        borderDash: [4, 4] as number[],
+        borderWidth: 1,
+        pointRadius: 0,
+        fill: false as const,
+        yAxisID: "y1",
+        order: 10,
+      },
+      // Main data lines
       {
         type: "line" as const,
         label: "ALT",
@@ -63,6 +102,7 @@ export function EnzymeChart({
         tension: 0.2,
         yAxisID: "y",
         spanGaps: true,
+        order: 1,
       },
       {
         type: "line" as const,
@@ -75,6 +115,7 @@ export function EnzymeChart({
         tension: 0.2,
         yAxisID: "y",
         spanGaps: true,
+        order: 1,
       },
       {
         type: "line" as const,
@@ -87,6 +128,7 @@ export function EnzymeChart({
         tension: 0.2,
         yAxisID: "y1",
         spanGaps: true,
+        order: 1,
       },
     ],
   };
@@ -97,7 +139,13 @@ export function EnzymeChart({
     interaction: { mode: "index" as const, intersect: false },
     plugins: {
       legend: { display: false },
-      tooltip: { backgroundColor: "#161b22", borderColor: "rgba(255,255,255,0.09)", borderWidth: 1 },
+      tooltip: {
+        backgroundColor: "#161b22",
+        borderColor: "rgba(255,255,255,0.09)",
+        borderWidth: 1,
+        filter: (item: { dataset: { label?: string } }) =>
+          !item.dataset.label?.startsWith("_"),
+      },
     },
     scales: {
       x: {

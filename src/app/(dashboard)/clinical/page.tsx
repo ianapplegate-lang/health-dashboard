@@ -224,16 +224,22 @@ export default async function ClinicalPage() {
         <div className="ct">
           Liver enzymes over time <span className="src-pill">Kaiser Permanente</span>
         </div>
-        <div className="csub">Dashed orange marker = antiviral start ~Apr 2026 · ALT normalized to ULN (50) Jun 2026</div>
+        <div className="csub">Dashed orange marker = antiviral start ~Apr 2026 · shaded bands = normal range</div>
         <div className="leg">
           <div className="li">
-            <span className="ld" style={{ background: "#f47067" }}></span>ALT (ULN 50)
+            <span className="ld" style={{ background: "#f47067" }}></span>ALT U/L
           </div>
           <div className="li">
-            <span className="ld" style={{ background: "#4a9eff" }}></span>AST (ULN 50)
+            <span className="ld" style={{ background: "#4a9eff" }}></span>AST U/L
           </div>
           <div className="li">
             <span className="ld" style={{ background: "#1aab7f" }}></span>Albumin gm/dL (right)
+          </div>
+          <div className="li">
+            <span className="ld" style={{ background: "rgba(255,255,255,0.18)", border: "1px dashed rgba(255,255,255,0.3)" }}></span>ALT/AST normal ≤40
+          </div>
+          <div className="li">
+            <span className="ld" style={{ background: "rgba(26,171,127,0.25)", border: "1px dashed rgba(26,171,127,0.4)" }}></span>Albumin normal 3.5–5.0
           </div>
         </div>
         <div className="cw">
